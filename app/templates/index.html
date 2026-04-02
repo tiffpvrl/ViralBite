@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ViralBite</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <header class="hero">
+    <div class="hero-content">
+      <div>
+        <p class="eyebrow">Agentic creator analytics</p>
+        <h1>ViralBite</h1>
+        <p class="hero-subtitle">
+          Creator intelligence for food content on YouTube. Explore what topics
+          are trending, what patterns drive engagement, and what creators should post next.
+        </p>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="panel">
+      <div class="section-header">
+        <h2>Tracked Topics</h2>
+        <button id="load-homepage-btn" class="primary-btn">Load Dashboard</button>
+      </div>
+      <div id="cards" class="cards"></div>
+    </section>
+
+    <section class="panel">
+      <div class="section-header">
+        <h2>Ask the Analyst</h2>
+      </div>
+
+      <div class="search-row">
+        <input
+          id="query-input"
+          type="text"
+          placeholder="Try: Why are NYC bagel videos trending?"
+        />
+        <button id="analyze-btn" class="primary-btn">Analyze</button>
+      </div>
+
+    <div class="quick-topics">
+    <button class="topic-btn">Why are NYC bagel videos trending?</button>
+    <button class="topic-btn">What format works best for matcha latte videos?</button>
+    <button class="topic-btn">What makes Brooklyn pizza videos perform well?</button>
+    </div>
+    </section>
+
+    <section class="panel">
+    <div class="section-header">
+        <h2>Analyst Report</h2>
+    </div>
+
+    <div id="loading" class="loading hidden">Running analysis...</div>
+
+    <div id="report-output" class="report-output">
+        <div class="empty-state">
+        Run an analysis to generate a report.
+        </div>
+    </div>
+    </section>
+
+    <section class="panel">
+    <div class="section-header">
+        <h2>Visual Evidence</h2>
+    </div>
+    <div class="chart-container">
+        <canvas id="durationChart"></canvas>
+    </div>
+    </section>
+  </main>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
