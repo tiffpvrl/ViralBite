@@ -60,7 +60,11 @@ function chartPalette() {
 function syncThemeToggleAria() {
   if (!themeToggleBtn) return;
   const dark = document.documentElement.getAttribute("data-theme") === "dark";
-  themeToggleBtn.setAttribute("aria-pressed", dark ? "true" : "false");
+  themeToggleBtn.setAttribute("aria-checked", dark ? "true" : "false");
+  const label = document.getElementById("theme-toggle-label");
+  if (label) {
+    label.textContent = dark ? "Color theme: dark" : "Color theme: light";
+  }
 }
 
 function initTheme() {
@@ -357,17 +361,24 @@ function renderDurationChart(patterns) {
           backgroundColor: C.paprika,
           borderRadius: 8,
           yAxisID: "y",
+          order: 0,
         },
         {
           label: "Video count (n)",
           data: filtered.map((p) => p.video_count || 0),
           type: "line",
           borderColor: C.brick,
-          backgroundColor: C.saffron,
-          pointRadius: 4,
-          borderWidth: 2,
+          backgroundColor: "transparent",
+          pointBackgroundColor: C.brick,
+          pointBorderColor: "#ffffff",
+          pointBorderWidth: 2,
+          pointRadius: 5,
+          pointHoverRadius: 6,
+          borderWidth: 3,
           tension: 0.25,
           yAxisID: "yCount",
+          order: 1,
+          fill: false,
         },
       ],
     },
@@ -375,6 +386,12 @@ function renderDurationChart(patterns) {
       responsive: true,
       maintainAspectRatio: false,
       layout: { padding: { top: 10, right: 8, bottom: 6, left: 4 } },
+      datasets: {
+        bar: {
+          categoryPercentage: 0.65,
+          barPercentage: 0.88,
+        },
+      },
       plugins: {
         legend: {
           display: true,
@@ -409,6 +426,17 @@ function renderDurationChart(patterns) {
         },
       },
     },
+    plugins: [
+      {
+        id: "lineOnTop",
+        afterDatasetsDraw(chart) {
+          const meta = chart.getDatasetMeta(1);
+          if (meta?.type === "line" && meta.controller) {
+            meta.controller.draw();
+          }
+        },
+      },
+    ],
   });
 }
 
@@ -634,7 +662,11 @@ function renderTopVideos(videos) {
 function addChatMessage(role, content) {
   const bubble = document.createElement("div");
   bubble.className = `chat-bubble ${role}`;
-  bubble.textContent = content;
+  if (role === "assistant") {
+    bubble.innerHTML = formatChatMarkdown(content);
+  } else {
+    bubble.textContent = content;
+  }
   chatMessagesEl.appendChild(bubble);
   chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
 }
@@ -682,6 +714,21 @@ function formatInlineMarkdown(text) {
     else out += `<strong class="brief-em">${escapeHtml(parts[i])}</strong>`;
   }
   return out;
+}
+
+/** Chat bubbles: paragraphs + line breaks + **bold** (same rules as inline markdown). */
+function formatChatMarkdown(text) {
+  if (text == null) return "";
+  const raw = String(text).trim();
+  if (!raw) return "";
+  const blocks = raw.split(/\n\n+/).map((b) => b.trim()).filter(Boolean);
+  if (!blocks.length) return "";
+  return blocks
+    .map((block) => {
+      const lines = block.split("\n").map((line) => formatInlineMarkdown(line));
+      return `<p class="chat-md-p">${lines.join("<br>")}</p>`;
+    })
+    .join("");
 }
 
 function renderBriefProseParagraphs(text) {

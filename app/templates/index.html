@@ -13,10 +13,15 @@
 <body>
   <header class="hero reveal-on-scroll">
     <div class="hero-inner">
-      <button type="button" id="theme-toggle" class="theme-toggle" aria-pressed="false" aria-labelledby="theme-toggle-label" title="Switch color theme">
-        <span class="theme-toggle-icon theme-toggle-sun" aria-hidden="true">☀</span>
-        <span class="theme-toggle-icon theme-toggle-moon" aria-hidden="true">☾</span>
-        <span id="theme-toggle-label" class="theme-toggle-label">Theme</span>
+      <button type="button" id="theme-toggle" class="theme-toggle" role="switch" aria-checked="false" aria-labelledby="theme-toggle-label" title="Switch color theme">
+        <span id="theme-toggle-label" class="visually-hidden">Color theme: light</span>
+        <span class="theme-toggle-track" aria-hidden="true">
+          <span class="theme-toggle-thumb"></span>
+          <span class="theme-toggle-icons">
+            <span class="theme-toggle-sun">☀</span>
+            <span class="theme-toggle-moon">☾</span>
+          </span>
+        </span>
       </button>
       <p class="eyebrow">creator trend intelligence</p>
       <h1 class="brand-title">
