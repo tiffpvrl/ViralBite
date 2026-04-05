@@ -15,7 +15,7 @@ def run_topic_analysis(
     query: str,
     window_days: int = 30,
     max_results: int = 35,
-    order: str = "relevance",
+    order: str = "viewCount",
     max_pages: int = 2,
     max_comments_per_video: int = 10,
 ) -> dict:

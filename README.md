@@ -12,11 +12,17 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 Set environment variables:
 
 - `YOUTUBE_API_KEY`
-- `OPENAI_API_KEY` (for creator brief + chat)
-- `OPENAI_MODEL` (optional, defaults to `gpt-4.1-mini`)
+- `GOOGLE_CLOUD_PROJECT` (for Vertex AI creator brief + chat)
+- `VERTEXAI_CREATOR_MODEL` (optional, defaults to `gemini-2.5-pro`) — NLP summary / creator brief
+- `VERTEXAI_CHAT_MODEL` (optional, defaults to `gemini-2.5-flash`) — `/chat` assistant
+- `VERTEXAI_MODEL` (optional legacy) — if set, used when `VERTEXAI_CREATOR_MODEL` or `VERTEXAI_CHAT_MODEL` is omitted
+- `VERTEXAI_THEME_MODEL` (optional, defaults to `gemini-1.5-flash`)
 - `VIRALBITE_CACHE_TTL_SECONDS` (optional, defaults to `600`)
 - `VIRALBITE_COMMENT_WORKERS` (optional, defaults to `6`)
 - `VIRALBITE_MAX_COMMENT_VIDEOS` (optional, defaults to `12`; `0` means fetch comments for all videos)
+- `VIRALBITE_ENABLE_TRANSCRIPTS` (optional, defaults to `1`)
+- `VIRALBITE_TRANSCRIPT_WORKERS` (optional, defaults to `4`)
+- `VIRALBITE_MAX_TRANSCRIPT_VIDEOS` (optional, defaults to `8`)
 
 ## Analyze defaults and tuning
 
@@ -24,7 +30,7 @@ Set environment variables:
 
 - `days` (default `30`): lookback window
 - `max_videos` (default `35`, max `50`): number of videos to analyze
-- `order` (default `relevance`): YouTube search ordering
+- `order` (default `viewCount`): YouTube search ordering
 - `max_pages` (default `2`): how many search pages to pull (up to `3`)
 - `max_comments` (default `10`): top comments per selected video
 
@@ -36,6 +42,7 @@ The frontend uses the defaults above and the dashboard now includes a sample def
 - `videos.list` is batched and relatively cheap.
 - Comment fetches are parallelized with a bounded thread pool to reduce wall-clock latency.
 - To protect throughput, comments are fetched for only `VIRALBITE_MAX_COMMENT_VIDEOS` top-view videos by default.
+- Transcript enrichment uses `youtube-transcript-api` for videos with public captions and is capped by `VIRALBITE_MAX_TRANSCRIPT_VIDEOS`.
 - `/analyze` responses are cached in memory for `VIRALBITE_CACHE_TTL_SECONDS`, keyed by query + analysis parameters.
 
 ## Product flow
@@ -77,5 +84,5 @@ State schema: `app/graph_state.py`.
 
 Deploy as a single FastAPI service on Railway or Render.
 
-- Configure `YOUTUBE_API_KEY` and `OPENAI_API_KEY` in the hosting dashboard.
+- Configure `YOUTUBE_API_KEY` and `GOOGLE_CLOUD_PROJECT` in the hosting dashboard.
 - Static frontend is already served by FastAPI via `StaticFiles`.

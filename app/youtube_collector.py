@@ -5,11 +5,18 @@ from typing import Any, Dict, Optional
 
 from dotenv import load_dotenv
 from googleapiclient.discovery import build
+try:
+    from youtube_transcript_api import YouTubeTranscriptApi
+except Exception:
+    YouTubeTranscriptApi = None
 
 load_dotenv()
 API_KEY = os.getenv("YOUTUBE_API_KEY")
 COMMENT_WORKERS = max(1, int(os.getenv("VIRALBITE_COMMENT_WORKERS", "6")))
 MAX_COMMENT_VIDEOS_DEFAULT = int(os.getenv("VIRALBITE_MAX_COMMENT_VIDEOS", "12"))
+ENABLE_TRANSCRIPTS = os.getenv("VIRALBITE_ENABLE_TRANSCRIPTS", "1") == "1"
+TRANSCRIPT_WORKERS = max(1, int(os.getenv("VIRALBITE_TRANSCRIPT_WORKERS", "4")))
+MAX_TRANSCRIPT_VIDEOS_DEFAULT = int(os.getenv("VIRALBITE_MAX_TRANSCRIPT_VIDEOS", "8"))
 
 if not API_KEY:
     raise ValueError("API key not found. Check your .env file.")
@@ -59,12 +66,22 @@ def _fetch_comments_for_video(video_id: str, max_comments: int) -> list[dict[str
     return get_comments(youtube=youtube, video_id=video_id, max_comments=max_comments)
 
 
+def _fetch_transcript_for_video(video_id: str) -> str:
+    if YouTubeTranscriptApi is None:
+        return ""
+    try:
+        transcript_rows = YouTubeTranscriptApi.get_transcript(video_id, languages=["en"])
+        return " ".join(row.get("text", "").strip() for row in transcript_rows if row.get("text"))
+    except Exception:
+        return ""
+
+
 def collect_youtube_data(
     query,
     max_results=25,
     max_comments_per_video=10,
     fetch_comments=True,
-    order="relevance",
+    order="viewCount",
     window_days: Optional[int] = 30,
     max_pages: int = 1,
 ):
@@ -176,7 +193,8 @@ def collect_youtube_data(
             "topic_categories": topic_details.get("topicCategories", []),
 
             # comments
-            "top_comments": []
+            "top_comments": [],
+            "transcript_text": "",
         }
 
         videos.append(video_record)
@@ -205,5 +223,30 @@ def collect_youtube_data(
 
         for video in videos:
             video["top_comments"] = comments_by_video.get(video["video_id"], [])
+
+    if ENABLE_TRANSCRIPTS and videos and YouTubeTranscriptApi is not None:
+        sorted_by_views = sorted(videos, key=lambda x: x.get("view_count", 0), reverse=True)
+        transcript_video_budget = MAX_TRANSCRIPT_VIDEOS_DEFAULT
+        if transcript_video_budget and transcript_video_budget > 0:
+            eligible_video_ids = {video["video_id"] for video in sorted_by_views[:transcript_video_budget]}
+        else:
+            eligible_video_ids = {video["video_id"] for video in sorted_by_views}
+
+        transcripts_by_video = {}
+        with ThreadPoolExecutor(max_workers=TRANSCRIPT_WORKERS) as executor:
+            future_map = {
+                executor.submit(_fetch_transcript_for_video, video["video_id"]): video["video_id"]
+                for video in videos
+                if video["video_id"] in eligible_video_ids
+            }
+            for future in as_completed(future_map):
+                video_id = future_map[future]
+                try:
+                    transcripts_by_video[video_id] = future.result()
+                except Exception:
+                    transcripts_by_video[video_id] = ""
+
+        for video in videos:
+            video["transcript_text"] = transcripts_by_video.get(video["video_id"], "")
 
     return videos

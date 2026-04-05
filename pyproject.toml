@@ -15,6 +15,7 @@ dependencies = [
     "pandas>=2.2.0",
     "pydantic>=2.8.0",
     "python-dotenv>=1.2.2",
+    "youtube-transcript-api>=0.6.2",
     "uvicorn>=0.30.0",
     "vaderSentiment>=3.3.2",
 ]

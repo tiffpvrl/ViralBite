@@ -26,7 +26,7 @@ let chatHistory = [];
 const DEFAULT_ANALYZE_PARAMS = {
   days: 30,
   max_videos: 35,
-  order: "relevance",
+  order: "viewCount",
   max_pages: 2,
   max_comments: 10,
 };
@@ -79,7 +79,7 @@ function renderOverview(summary, sampleDefinition) {
     { label: "Total views", value: fmt(summary.total_views || 0, 0), note: `across ${fmt(summary.num_videos || 0, 0)} videos` },
     { label: "Avg engagement rate", value: `${fmt((summary.avg_engagement_rate || 0) * 100, 2)}%`, note: "likes + comments / views" },
     { label: "Median view count", value: fmt(summary.median_views || 0, 0), note: "less skewed than average" },
-    { label: "Dominant video length", value: summary.dominant_duration_bucket || "N/A", note: `avg length ${toMinutes(Math.round(summary.avg_duration_seconds || 0))}` },
+    { label: "Avg video length", value: toMinutes(Math.round(summary.avg_duration_seconds || 0)), note: `top bucket: ${summary.dominant_duration_bucket || "N/A"}` },
   ];
 
   overviewCardsEl.innerHTML = cards
@@ -96,8 +96,9 @@ function renderOverview(summary, sampleDefinition) {
   const days = sampleDefinition?.window_days ?? DEFAULT_ANALYZE_PARAMS.days;
   const order = sampleDefinition?.order || DEFAULT_ANALYZE_PARAMS.order;
   const count = sampleDefinition?.fetched_videos ?? summary.num_videos ?? 0;
+  const transcriptCount = sampleDefinition?.videos_with_transcript ?? 0;
   sampleDefinitionEl.textContent =
-    `Based on ${fmt(count, 0)} videos from the last ${days} days (YouTube search order: ${order}).`;
+    `Based on ${fmt(count, 0)} videos from the last ${days} days (order: ${order}). Transcript text available for ${fmt(transcriptCount, 0)} videos.`;
 }
 
 function renderDurationChart(patterns) {
@@ -178,6 +179,13 @@ function renderUploadChart(uploadFrequency) {
     options: {
       responsive: true,
       plugins: { legend: { display: false } },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: { precision: 0 },
+          suggestedMax: Math.max(2, ...uploadFrequency.map((x) => x.video_count || 0)),
+        },
+      },
     },
   });
 }
@@ -194,7 +202,8 @@ function renderKeywordSignals(keywords) {
     .forEach((row) => {
       const chip = document.createElement("div");
       chip.className = "keyword-chip";
-      chip.innerHTML = `<strong>${truncateText(row.keyword, 22)}</strong><span>${fmt((row.avg_engagement_rate || 0) * 100, 2)}% eng · ${row.video_count} videos</span>`;
+      const keywordName = truncateText(row.keyword, 22);
+      chip.innerHTML = `<strong>${keywordName}</strong><span>${fmt((row.avg_engagement_rate || 0) * 100, 2)}% eng · ${row.video_count} videos</span>`;
       keywordSignalsEl.appendChild(chip);
     });
 }
@@ -210,9 +219,8 @@ function renderSentiment(sentiment) {
     <div class="seg negative" style="width:${negative}%">${fmt(negative, 0)}%</div>
   `;
 
-  const posThemes = (sentiment.top_positive_themes || []).join(", ") || "n/a";
-  const negThemes = (sentiment.top_negative_themes || []).join(", ") || "n/a";
-  sentimentMetaEl.textContent = `Analyzed ${sentiment.num_comments_analyzed || 0} comments · Positive themes: ${posThemes} · Negative themes: ${negThemes}`;
+  const themes = (sentiment.top_positive_themes || []).join(", ") || "n/a";
+  sentimentMetaEl.textContent = `Analyzed ${sentiment.num_comments_analyzed || 0} comments · Top themes: ${themes}`;
 }
 
 function renderSponsor(sponsorship) {

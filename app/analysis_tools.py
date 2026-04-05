@@ -58,6 +58,7 @@ def videos_to_dataframe(videos: List[Dict[str, Any]]) -> pd.DataFrame:
             "duration_seconds": duration_seconds,
             "tags_text": " ".join(tags),
             "comments_text": " || ".join(comment_texts),
+            "transcript_text": v.get("transcript_text", "") or "",
             "num_fetched_comments": len(comment_texts),
         })
 
@@ -139,7 +140,8 @@ def analyze_keyword_patterns(
     searchable_text = (
         df["title"].fillna("") + " " +
         df["description"].fillna("") + " " +
-        df["tags_text"].fillna("")
+        df["tags_text"].fillna("") + " " +
+        df["transcript_text"].fillna("")
     ).str.lower()
 
     for keyword in keywords:
@@ -169,16 +171,20 @@ def analyze_upload_frequency(df: pd.DataFrame) -> List[Dict[str, Any]]:
     if valid.empty:
         return []
 
-    end_date = valid["published_at"].max()
+    # Use explicit week-start bins so reindexing does not zero-out due to boundary mismatch.
+    week_start_labels = valid["published_at"].dt.to_period("W").astype(str).str.split("/").str[0]
+    valid["week_start"] = pd.to_datetime(week_start_labels, utc=True, errors="coerce")
+    valid = valid.dropna(subset=["week_start"])
+    if valid.empty:
+        return []
     weekly_counts = (
-        valid.set_index("published_at")
-        .groupby(pd.Grouper(freq="W"))
+        valid.groupby("week_start")
         .size()
         .rename("video_count")
     )
-
-    all_weeks = pd.date_range(end=end_date, periods=8, freq="W")
-    weekly_counts = weekly_counts.reindex(all_weeks, fill_value=0)
+    end_week = valid["week_start"].max()
+    all_weeks = [end_week - pd.Timedelta(days=7 * idx) for idx in range(7, -1, -1)]
+    weekly_counts = weekly_counts.reindex(pd.DatetimeIndex(all_weeks), fill_value=0)
 
     return [
         {"week": week.strftime("%Y-%m-%d"), "video_count": int(count)}
@@ -222,6 +228,7 @@ def analyze_comment_sentiment(df: pd.DataFrame) -> Dict[str, Any]:
             "top_positive_themes": [],
             "top_negative_themes": [],
             "num_comments_analyzed": 0,
+            "comment_samples": [],
         }
 
     analyzer = SentimentIntensityAnalyzer()
@@ -239,6 +246,7 @@ def analyze_comment_sentiment(df: pd.DataFrame) -> Dict[str, Any]:
             "top_positive_themes": [],
             "top_negative_themes": [],
             "num_comments_analyzed": 0,
+            "comment_samples": [],
         }
 
     positive_comments: List[str] = []
@@ -266,6 +274,7 @@ def analyze_comment_sentiment(df: pd.DataFrame) -> Dict[str, Any]:
         "top_positive_themes": _extract_top_themes(positive_comments, top_n=3),
         "top_negative_themes": _extract_top_themes(negative_comments, top_n=3),
         "num_comments_analyzed": total,
+        "comment_samples": all_comments[:120],
     }
 
 
@@ -281,11 +290,22 @@ def analyze_sponsorship(df: pd.DataFrame) -> Dict[str, Any]:
         }
 
     ad_pattern = re.compile(
-        r"(#ad\b|#sponsored\b|paid partnership|this video is sponsored|sponsored by|use code|use my code)",
+        (
+            r"(#ad\b|#sponsored\b|#partner\b|#paidpartnership\b|#promotion\b|#sp\b|"
+            r"paid partnership|includes paid promotion|this video is sponsored|"
+            r"sponsored by|in partnership with|thanks to .* for sponsoring|"
+            r"use code|use my code)"
+        ),
         flags=re.IGNORECASE
     )
-    descriptions = df["description"].fillna("").astype(str)
-    sponsored_mask = descriptions.str.contains(ad_pattern, regex=True)
+    not_sponsored_pattern = re.compile(r"(not sponsored|unsponsored)", flags=re.IGNORECASE)
+    sponsor_text = (
+        df["title"].fillna("").astype(str) + " " + df["description"].fillna("").astype(str)
+    )
+    sponsored_mask = (
+        sponsor_text.str.contains(ad_pattern, regex=True)
+        & ~sponsor_text.str.contains(not_sponsored_pattern, regex=True)
+    )
 
     sponsored = df[sponsored_mask]
     organic = df[~sponsored_mask]
