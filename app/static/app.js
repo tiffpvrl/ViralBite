@@ -8,8 +8,10 @@ const overviewCardsEl = document.getElementById("overview-cards");
 const sampleDefinitionEl = document.getElementById("sample-definition");
 const keywordSignalsEl = document.getElementById("keyword-signals");
 const sentimentBarEl = document.getElementById("sentiment-bar");
+const sentimentLegendEl = document.getElementById("sentiment-legend");
 const sentimentMetaEl = document.getElementById("sentiment-meta");
 const sponsorMetaEl = document.getElementById("sponsor-meta");
+const sponsorLegendEl = document.getElementById("sponsor-legend");
 const topVideosBodyEl = document.querySelector("#top-videos-table tbody");
 const nlpSummaryEl = document.getElementById("nlp-summary");
 const recommendationsEl = document.getElementById("recommendations");
@@ -108,21 +110,25 @@ function renderDurationChart(patterns) {
   const ctx = document.getElementById("durationChart");
   if (durationChart) durationChart.destroy();
 
+  const filtered = (patterns || []).filter(
+    (p) => p.duration_bucket && String(p.duration_bucket) !== "0-60s"
+  );
+
   durationChart = new Chart(ctx, {
     type: "bar",
     data: {
-      labels: patterns.map((p) => p.duration_bucket),
+      labels: filtered.map((p) => p.duration_bucket),
       datasets: [
         {
           label: "Avg engagement rate",
-          data: patterns.map((p) => (p.avg_engagement_rate || 0) * 100),
+          data: filtered.map((p) => (p.avg_engagement_rate || 0) * 100),
           backgroundColor: "rgba(86, 156, 246, 0.75)",
           borderRadius: 8,
           yAxisID: "y",
         },
         {
           label: "Video count (n)",
-          data: patterns.map((p) => p.video_count || 0),
+          data: filtered.map((p) => p.video_count || 0),
           type: "line",
           borderColor: "rgba(233, 241, 252, 0.9)",
           backgroundColor: "rgba(233, 241, 252, 0.9)",
@@ -141,7 +147,7 @@ function renderDurationChart(patterns) {
           callbacks: {
             afterBody(context) {
               const idx = context?.[0]?.dataIndex ?? 0;
-              const median = patterns[idx]?.median_engagement_rate;
+              const median = filtered[idx]?.median_engagement_rate;
               if (typeof median === "number") {
                 return [`Median engagement: ${fmt(median * 100, 2)}%`];
               }
@@ -222,13 +228,50 @@ function renderSentiment(sentiment) {
     <div class="seg negative" style="width:${negative}%">${fmt(negative, 0)}%</div>
   `;
 
+  if (sentimentLegendEl) {
+    sentimentLegendEl.innerHTML = `
+      <span class="sent-legend-item"><span class="sent-swatch positive" aria-hidden="true"></span>Positive</span>
+      <span class="sent-legend-item"><span class="sent-swatch neutral" aria-hidden="true"></span>Neutral</span>
+      <span class="sent-legend-item"><span class="sent-swatch negative" aria-hidden="true"></span>Negative</span>
+    `;
+  }
+
   const themes = (sentiment.top_positive_themes || []).join(", ") || "n/a";
-  sentimentMetaEl.textContent = `Analyzed ${sentiment.num_comments_analyzed || 0} comments · Top themes: ${themes}`;
+  sentimentMetaEl.textContent = "";
+  const lead = document.createElement("span");
+  lead.className = "insight-meta-lead";
+  lead.textContent = `Analyzed ${sentiment.num_comments_analyzed || 0} comments · Top comment themes: `;
+  const em = document.createElement("strong");
+  em.className = "insight-meta-em";
+  em.textContent = themes;
+  sentimentMetaEl.appendChild(lead);
+  sentimentMetaEl.appendChild(em);
 }
 
 function renderSponsor(sponsorship) {
   const ctx = document.getElementById("sponsorChart");
   if (sponsorChart) sponsorChart.destroy();
+
+  const spCount = sponsorship.sponsored_count || 0;
+  const orgCount = sponsorship.organic_count || 0;
+  const total = spCount + orgCount;
+  const spPct = total ? (spCount / total) * 100 : 0;
+  const orgPct = total ? (orgCount / total) * 100 : 0;
+
+  if (sponsorLegendEl) {
+    sponsorLegendEl.innerHTML = `
+    <div class="sponsor-legend-row">
+      <span class="sponsor-swatch sponsored" aria-hidden="true"></span>
+      <span class="sponsor-legend-label">Sponsored</span>
+      <span class="sponsor-legend-pct">${fmt(spPct, 0)}%</span>
+    </div>
+    <div class="sponsor-legend-row">
+      <span class="sponsor-swatch organic" aria-hidden="true"></span>
+      <span class="sponsor-legend-label">Organic</span>
+      <span class="sponsor-legend-pct">${fmt(orgPct, 0)}%</span>
+    </div>
+  `;
+  }
 
   sponsorChart = new Chart(ctx, {
     type: "doughnut",
@@ -236,21 +279,66 @@ function renderSponsor(sponsorship) {
       labels: ["Sponsored", "Organic"],
       datasets: [
         {
-          data: [sponsorship.sponsored_count || 0, sponsorship.organic_count || 0],
-          backgroundColor: ["rgba(73, 131, 197, 0.9)", "rgba(165, 198, 233, 0.9)"],
+          data: [spCount, orgCount],
+          backgroundColor: ["#3d6fa3", "#9ec5eb"],
+          borderWidth: 0,
+          hoverOffset: 4,
         },
       ],
     },
     options: {
       responsive: true,
+      maintainAspectRatio: true,
+      cutout: "58%",
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label(ctx) {
+              const v = ctx.raw || 0;
+              const p = total ? ((v / total) * 100).toFixed(1) : "0";
+              return `${ctx.label}: ${fmt(v, 0)} (${p}%)`;
+            },
+          },
+        },
+      },
     },
   });
 
-  sponsorMetaEl.textContent =
-    `Sponsored avg views: ${fmt(sponsorship.sponsored_avg_views || 0, 0)} | ` +
-    `Organic avg views: ${fmt(sponsorship.organic_avg_views || 0, 0)} | ` +
-    `Sponsored eng: ${fmt((sponsorship.sponsored_avg_engagement || 0) * 100, 2)}% | ` +
-    `Organic eng: ${fmt((sponsorship.organic_avg_engagement || 0) * 100, 2)}%`;
+  const sv = sponsorship.sponsored_avg_views || 0;
+  const ov = sponsorship.organic_avg_views || 0;
+  const se = sponsorship.sponsored_avg_engagement || 0;
+  const oe = sponsorship.organic_avg_engagement || 0;
+
+  let metaHtml = "";
+  if (total === 0) {
+    metaHtml = `<span class="insight-meta-lead">No videos in sample.</span>`;
+  } else if (spCount === 0) {
+    metaHtml = `<span class="insight-meta-lead">No sponsored videos detected in this sample.</span>`;
+  } else if (orgCount === 0) {
+    metaHtml = `<span class="insight-meta-lead">All sampled videos are marked sponsored.</span>`;
+  } else if (ov > 0 && oe > 0) {
+    const vx = sv / ov;
+    const ex = se / oe;
+    metaHtml =
+      `<span class="insight-meta-lead">Sponsored videos average </span>` +
+      `<strong class="insight-meta-em">${fmt(vx, 1)}×</strong>` +
+      `<span class="insight-meta-lead"> higher views but </span>` +
+      `<strong class="insight-meta-em">${fmt(ex, 1)}×</strong>` +
+      `<span class="insight-meta-lead"> the engagement rate vs organic.</span>`;
+  } else {
+    metaHtml =
+      `<span class="insight-meta-lead">Avg views — sponsored </span>` +
+      `<strong class="insight-meta-em">${fmt(sv, 0)}</strong>` +
+      `<span class="insight-meta-lead"> · organic </span>` +
+      `<strong class="insight-meta-em">${fmt(ov, 0)}</strong>` +
+      `<span class="insight-meta-lead"> · engagement </span>` +
+      `<strong class="insight-meta-em">${fmt(se * 100, 2)}%</strong>` +
+      `<span class="insight-meta-lead"> vs </span>` +
+      `<strong class="insight-meta-em">${fmt(oe * 100, 2)}%</strong>`;
+  }
+
+  sponsorMetaEl.innerHTML = metaHtml;
 }
 
 function renderTopVideos(videos) {

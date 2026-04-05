@@ -72,6 +72,115 @@ h1 {
   font-size: 20px;
 }
 
+.panel-subtitle {
+  margin: -4px 0 12px;
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.insight-meta {
+  margin-top: 12px;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.insight-meta-lead {
+  color: var(--muted);
+}
+
+.insight-meta-em {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.sentiment-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px 18px;
+  margin-top: 10px;
+  align-items: center;
+}
+
+.sent-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.sent-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.sent-swatch.positive { background: #8bc34a; }
+.sent-swatch.neutral { background: #d1d5db; }
+.sent-swatch.negative { background: #f87171; }
+
+.sponsor-insight {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 16px;
+  margin-top: 4px;
+}
+
+.sponsor-chart-wrap {
+  flex: 0 0 min(44%, 160px);
+  max-width: 160px;
+  min-width: 120px;
+}
+
+.sponsor-chart-wrap canvas {
+  max-height: 180px;
+}
+
+.sponsor-legend {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.sponsor-legend-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+}
+
+.sponsor-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.sponsor-swatch.sponsored {
+  background: #3d6fa3;
+}
+
+.sponsor-swatch.organic {
+  background: #9ec5eb;
+}
+
+.sponsor-legend-label {
+  flex: 1;
+  color: var(--text);
+}
+
+.sponsor-legend-pct {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  min-width: 3ch;
+  text-align: right;
+}
+
 .badge {
   background: rgba(94, 162, 230, 0.15);
   color: #b0d6fb;
@@ -319,5 +428,16 @@ th {
   .custom-topic,
   .chat-input-row {
     flex-direction: column;
+  }
+
+  .sponsor-insight {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .sponsor-chart-wrap {
+    flex: 0 0 auto;
+    max-width: 200px;
+    margin: 0 auto;
   }
 }

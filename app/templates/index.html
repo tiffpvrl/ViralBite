@@ -63,27 +63,36 @@
       </div>
 
       <div class="insights-grid">
-        <section class="panel">
+        <section class="panel insight-panel">
           <div class="section-title">
             <h2>Keyword signals</h2>
           </div>
+          <p class="panel-subtitle">Keywords by avg engagement in titles/tags</p>
           <div id="keyword-signals" class="keyword-list"></div>
         </section>
 
-        <section class="panel">
+        <section class="panel insight-panel">
           <div class="section-title">
             <h2>Comment sentiment</h2>
           </div>
+          <p class="panel-subtitle">VADER analysis across top comments</p>
           <div id="sentiment-bar" class="sentiment-bar"></div>
-          <div id="sentiment-meta" class="muted"></div>
+          <div id="sentiment-legend" class="sentiment-legend" aria-hidden="true"></div>
+          <div id="sentiment-meta" class="insight-meta"></div>
         </section>
 
-        <section class="panel">
+        <section class="panel insight-panel">
           <div class="section-title">
             <h2>Sponsored vs organic</h2>
           </div>
-          <canvas id="sponsorChart"></canvas>
-          <div id="sponsor-meta" class="muted"></div>
+          <p class="panel-subtitle">Detected via #ad / &quot;sponsored by&quot; in descriptions</p>
+          <div class="sponsor-insight">
+            <div class="sponsor-chart-wrap">
+              <canvas id="sponsorChart"></canvas>
+            </div>
+            <div id="sponsor-legend" class="sponsor-legend"></div>
+          </div>
+          <div id="sponsor-meta" class="insight-meta"></div>
         </section>
       </div>
 

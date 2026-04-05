@@ -106,11 +106,12 @@ def videos_to_dataframe(videos: List[Dict[str, Any]]) -> Tuple[pd.DataFrame, Dic
 
     df["engagement_rate"] = df["like_rate"] + df["comment_rate"]
 
+    # Long-form sample only; buckets start above typical Shorts (no 0–60s bar).
     df["duration_bucket"] = pd.cut(
         df["duration_seconds"],
-        bins=[0, 60, 180, 600, 999999],
-        labels=["0-60s", "1-3m", "3-10m", "10m+"],
-        include_lowest=True
+        bins=[60, 180, 600, 999999],
+        labels=["1-3m", "3-10m", "10m+"],
+        include_lowest=True,
     )
 
     return df, filter_meta
@@ -351,7 +352,7 @@ def analyze_top_videos(df: pd.DataFrame, top_n: int = 5) -> List[Dict[str, Any]]
     if df.empty:
         return []
 
-    ranked = df.sort_values(by="engagement_rate", ascending=False).head(top_n)
+    ranked = df.sort_values(by="view_count", ascending=False).head(top_n)
     rows = []
     for _, row in ranked.iterrows():
         rows.append({
