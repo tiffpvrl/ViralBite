@@ -58,7 +58,7 @@ def generate_creator_brief(analysis: Dict[str, Any]) -> Dict[str, Any]:
 
     try:
         llm = ChatVertexAI(
-            model_name=os.getenv("VERTEXAI_MODEL", "gemini-1.5-flash"),
+            model_name=os.getenv("VERTEXAI_MODEL", "gemini-2.5-flash"),
             temperature=0.4,
             project=project,
         )
