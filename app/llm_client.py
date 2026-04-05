@@ -2,8 +2,9 @@ import json
 import os
 from typing import Any, Dict, List
 
-from openai import OpenAI
 from pydantic import BaseModel, ValidationError
+from langchain_google_vertexai import ChatVertexAI
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 
 
 class CreatorBrief(BaseModel):
@@ -51,54 +52,32 @@ def _fallback_creator_brief(analysis: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def generate_creator_brief(analysis: Dict[str, Any]) -> Dict[str, Any]:
-    api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key:
+    project = os.getenv("GOOGLE_CLOUD_PROJECT")
+    if not project:
         return _fallback_creator_brief(analysis)
 
-    client = OpenAI(api_key=api_key)
-    model = os.getenv("OPENAI_MODEL", "gpt-4.1-mini")
-    schema = {
-        "type": "object",
-        "properties": {
-            "summary": {"type": "string"},
-            "recommendations": {
-                "type": "array",
-                "items": {"type": "string"},
-                "minItems": 3,
-                "maxItems": 4,
-            },
-        },
-        "required": ["summary", "recommendations"],
-        "additionalProperties": False,
-    }
-
     try:
-        response = client.chat.completions.create(
-            model=model,
-            response_format={"type": "json_object"},
-            messages=[
-                {
-                    "role": "system",
-                    "content": (
-                        "You are a YouTube food content analyst. You will receive structured data "
-                        "about a food topic. Write a creator brief with: (1) a 2-3 sentence summary "
-                        "of what patterns you found, (2) 3-4 specific actionable recommendations for "
-                        "a creator making a video on this topic. Be concrete and mention formats, "
-                        "title ideas, ideal length, and where to place a sponsor if relevant. "
-                        "Ground everything in the numbers provided. "
-                        "Return JSON matching this schema exactly: "
-                        + json.dumps(schema)
-                    ),
-                },
-                {"role": "user", "content": json.dumps(analysis)},
-            ],
+        llm = ChatVertexAI(
+            model_name=os.getenv("VERTEXAI_MODEL", "gemini-1.5-flash"),
             temperature=0.4,
+            project=project,
+        )
+        structured_llm = llm.with_structured_output(CreatorBrief)
+
+        prompt = (
+            "You are a YouTube food content analyst. You will receive structured data "
+            "about a food topic. Write a creator brief with: (1) a 2-3 sentence summary "
+            "of what patterns you found, (2) 3-4 specific actionable recommendations for "
+            "a creator making a video on this topic. Be concrete and mention formats, "
+            "title ideas, ideal length, and where to place a sponsor if relevant. "
+            "Ground everything in the numbers provided.\n\n"
+            f"ANALYSIS: {json.dumps(analysis)}"
         )
 
-        content = response.choices[0].message.content or "{}"
-        parsed = CreatorBrief.model_validate(json.loads(content))
+        parsed = structured_llm.invoke(prompt)
         return parsed.model_dump()
-    except (ValidationError, json.JSONDecodeError, Exception):
+    except Exception as e:
+        print(f"Vertex AI Error: {e}")
         return _fallback_creator_brief(analysis)
 
 
@@ -108,41 +87,43 @@ def chat_with_analysis_context(
     history: List[Dict[str, str]],
     message: str,
 ) -> str:
-    api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key:
+    project = os.getenv("GOOGLE_CLOUD_PROJECT")
+    if not project:
         return (
-            "Chat is running in fallback mode because OPENAI_API_KEY is not set. "
+            "Chat is running in fallback mode because GOOGLE_CLOUD_PROJECT is not set. "
             "I can still summarize: ask about top videos, duration patterns, sponsorship, "
             "or creator recommendations."
         )
 
-    client = OpenAI(api_key=api_key)
-    model = os.getenv("OPENAI_MODEL", "gpt-4.1-mini")
+    try:
+        llm = ChatVertexAI(
+            model_name=os.getenv("VERTEXAI_MODEL", "gemini-1.5-flash"),
+            temperature=0.3,
+            project=project,
+        )
 
-    messages = [
-        {
-            "role": "system",
-            "content": (
+        messages = [
+            SystemMessage(content=(
                 "You are ViralBite, a creator strategy assistant. Answer only using the provided "
                 "analysis context for the topic. If information is missing, say so clearly and "
                 "suggest what metric would help. Keep answers concise and practical.\n\n"
                 f"TOPIC: {topic}\n"
                 f"ANALYSIS_JSON: {json.dumps(analysis)}"
-            ),
-        }
-    ]
+            ))
+        ]
 
-    for item in history:
-        role = item.get("role")
-        content = item.get("content", "")
-        if role in {"user", "assistant"} and content:
-            messages.append({"role": role, "content": content})
+        for item in history:
+            role = item.get("role")
+            content = item.get("content", "")
+            if role == "user" and content:
+                messages.append(HumanMessage(content=content))
+            elif role == "assistant" and content:
+                messages.append(AIMessage(content=content))
 
-    messages.append({"role": "user", "content": message})
+        messages.append(HumanMessage(content=message))
 
-    response = client.chat.completions.create(
-        model=model,
-        messages=messages,
-        temperature=0.3,
-    )
-    return response.choices[0].message.content or ""
+        response = llm.invoke(messages)
+        return str(response.content) if response.content else ""
+    except Exception as e:
+        print(f"Vertex AI Chat Error: {e}")
+        return "I'm having trouble connecting to Vertex AI right now."

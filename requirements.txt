@@ -8,6 +8,6 @@ pandas
 matplotlib
 python-dotenv
 google-api-python-client
-openai
+langchain-google-vertexai
 vaderSentiment
 jinja2
