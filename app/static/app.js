@@ -20,6 +20,10 @@ const chatMessagesEl = document.getElementById("chat-messages");
 const chatInputEl = document.getElementById("chat-input");
 const chatSendBtn = document.getElementById("chat-send-btn");
 const themeToggleBtn = document.getElementById("theme-toggle");
+const creatorModalEl = document.getElementById("creator-profile-modal");
+const creatorProfileInputEl = document.getElementById("creator-profile-input");
+const creatorProfileSaveBtn = document.getElementById("creator-profile-save");
+const creatorProfilePreviewEl = document.getElementById("creator-profile-preview");
 
 let durationChart = null;
 let uploadChart = null;
@@ -27,6 +31,7 @@ let sponsorChart = null;
 let latestAnalysis = null;
 let latestTopic = "";
 let chatHistory = [];
+let creatorProfile = "";
 const DEFAULT_ANALYZE_PARAMS = {
   days: 30,
   max_videos: 35,
@@ -83,6 +88,40 @@ function initThemeToggle() {
     localStorage.setItem("viralbite-theme", next);
     syncThemeToggleAria();
     window.dispatchEvent(new CustomEvent("viralbite-theme-change"));
+  });
+}
+
+function persistCreatorProfile(value) {
+  creatorProfile = String(value || "").trim();
+  localStorage.setItem("viralbite-creator-profile", creatorProfile);
+  if (creatorProfilePreviewEl) {
+    creatorProfilePreviewEl.textContent = creatorProfile
+      ? `Creator context: ${creatorProfile}`
+      : "Creator context not set";
+  }
+}
+
+function initCreatorProfileModal() {
+  const existing = localStorage.getItem("viralbite-creator-profile") || "";
+  persistCreatorProfile(existing);
+  if (!creatorModalEl || !creatorProfileInputEl || !creatorProfileSaveBtn) return;
+  creatorProfileInputEl.value = creatorProfile;
+  creatorModalEl.classList.remove("hidden");
+  creatorModalEl.setAttribute("aria-hidden", "false");
+  creatorProfileInputEl.focus();
+
+  creatorProfileSaveBtn.addEventListener("click", () => {
+    const text = creatorProfileInputEl.value.trim();
+    if (!text) return;
+    persistCreatorProfile(text);
+    creatorModalEl.classList.add("hidden");
+    creatorModalEl.setAttribute("aria-hidden", "true");
+  });
+
+  creatorProfileInputEl.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+      creatorProfileSaveBtn.click();
+    }
   });
 }
 
@@ -749,10 +788,13 @@ function renderProductionBriefHtml(text) {
 function renderCreatorBrief(finalResponse, query) {
   const topic = (query || "").trim() || "topic";
   if (creatorBriefTitleEl) {
-    creatorBriefTitleEl.textContent = `Your ${topic} video recommendation`;
+    creatorBriefTitleEl.textContent = `Two ${topic} brief ideas for your channel`;
   }
 
   const brief = finalResponse?.creator_brief || {};
+  const ideas = Array.isArray(brief?.ideas)
+    ? brief.ideas.filter(Boolean)
+    : (brief?.opportunity_statement ? [brief] : []);
   const conf = finalResponse?.brief_confidence || {};
 
   if (briefConfidenceEl) {
@@ -792,25 +834,31 @@ function renderCreatorBrief(finalResponse, query) {
 
   if (!creatorBriefBodyEl) return;
 
-  if (brief.opportunity_statement) {
-    const sections = [
-      { step: "1", title: "The opportunity", html: renderBriefProseParagraphs(brief.opportunity_statement) },
-      { step: "2", title: "The video concept", html: renderVideoConceptHtml(brief.video_concept) },
-      { step: "3", title: "The production brief", html: renderProductionBriefHtml(brief.production_brief) },
-      { step: "4", title: "The differentiation angle", html: renderBriefProseParagraphs(brief.differentiation_angle) },
-    ];
-    creatorBriefBodyEl.innerHTML = sections
-      .map(
-        (s) => `
-      <article class="brief-block-card">
-        <header class="brief-block-header">
-          <span class="brief-block-step" aria-hidden="true">${escapeHtml(s.step)}</span>
-          <h3 class="brief-block-title">${escapeHtml(s.title)}</h3>
-        </header>
-        <div class="brief-block-content">${s.html}</div>
-      </article>`
-      )
-      .join("");
+  if (ideas.length) {
+    creatorBriefBodyEl.innerHTML = ideas.slice(0, 2).map((idea, ideaIdx) => {
+      const sections = [
+        { step: "1", title: "The opportunity", html: renderBriefProseParagraphs(idea.opportunity_statement) },
+        { step: "2", title: "The video concept", html: renderVideoConceptHtml(idea.video_concept) },
+        { step: "3", title: "The production brief", html: renderProductionBriefHtml(idea.production_brief) },
+        { step: "4", title: "The differentiation angle", html: renderBriefProseParagraphs(idea.differentiation_angle) },
+      ];
+      return `
+      <article class="brief-idea-wrap">
+        <h3 class="brief-idea-heading">Idea ${ideaIdx + 1}</h3>
+        ${sections
+          .map(
+            (s) => `
+          <article class="brief-block-card">
+            <header class="brief-block-header">
+              <span class="brief-block-step" aria-hidden="true">${escapeHtml(s.step)}</span>
+              <h4 class="brief-block-title">${escapeHtml(s.title)}</h4>
+            </header>
+            <div class="brief-block-content">${s.html}</div>
+          </article>`
+          )
+          .join("")}
+      </article>`;
+    }).join("");
     return;
   }
 
@@ -862,6 +910,11 @@ function loadingYield(ms = 140) {
 async function runAnalysis(topic) {
   const query = topic?.trim();
   if (!query) return;
+  if (!creatorProfile) {
+    if (creatorModalEl) creatorModalEl.classList.remove("hidden");
+    if (creatorProfileInputEl) creatorProfileInputEl.focus();
+    return;
+  }
   setLoadingVisible(true);
   analyzeBtn.disabled = true;
   try {
@@ -872,6 +925,7 @@ async function runAnalysis(topic) {
       order: DEFAULT_ANALYZE_PARAMS.order,
       max_pages: String(DEFAULT_ANALYZE_PARAMS.max_pages),
       max_comments: String(DEFAULT_ANALYZE_PARAMS.max_comments),
+      creator_profile: creatorProfile,
     });
     const response = await fetch(`/analyze?${params.toString()}`);
     setLoadingStep(1);
@@ -899,6 +953,7 @@ chatInputEl.addEventListener("keydown", (event) => {
 });
 
 initTheme();
+initCreatorProfileModal();
 initScrollReveal();
 initThemeToggle();
 initDashboardTabs();

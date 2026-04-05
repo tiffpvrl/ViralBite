@@ -18,6 +18,7 @@ def run_topic_analysis(
     order: str = "viewCount",
     max_pages: int = 10,
     max_comments_per_video: int = 10,
+    creator_profile: str = "",
 ) -> dict:
     try:
         min_dur = int(os.getenv("VIRALBITE_MIN_DURATION_SECONDS", "60"))
@@ -31,6 +32,7 @@ def run_topic_analysis(
         int(max_pages),
         int(max_comments_per_video),
         min_dur,
+        creator_profile.strip().lower(),
     )
     now = time.time()
     with _CACHE_LOCK:
@@ -49,6 +51,7 @@ def run_topic_analysis(
             "order": order,
             "max_pages": max_pages,
             "max_comments_per_video": max_comments_per_video,
+            "creator_profile": creator_profile,
         }
     )
     analysis = state.get("analysis", {})

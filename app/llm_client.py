@@ -46,7 +46,17 @@ class CommentThemeOutput(BaseModel):
     themes: List[str]
 
 
-def _fallback_creator_brief(analysis: Dict[str, Any]) -> Dict[str, Any]:
+class CreatorBriefIdeas(BaseModel):
+    ideas: List[CreatorBrief] = Field(
+        description="Exactly two distinct brief ideas tailored to this creator and topic."
+    )
+
+
+def _build_fallback_idea(
+    analysis: Dict[str, Any],
+    creator_profile: str,
+    mode: str,
+) -> Dict[str, Any]:
     topic = analysis.get("topic") or "this topic"
     summary = analysis.get("summary", {})
     sponsorship = analysis.get("sponsorship", {})
@@ -68,21 +78,33 @@ def _fallback_creator_brief(analysis: Dict[str, Any]) -> Dict[str, Any]:
         else "Upload trend is flat or not computable from the weekly buckets."
     )
 
+    creator_note = (
+        f" Tailor this to creator context: {creator_profile}."
+        if creator_profile
+        else ""
+    )
+
     opp = (
         f"Across {n} long-form videos on “{topic}”, average engagement is about {avg_eng:.4f}. "
         f"{trend_note} "
         f"The strongest duration bucket in this sample is {best_duration.get('duration_bucket', '1-3m')} "
-        f"by engagement rate — use that as a starting length range."
+        f"by engagement rate — use that as a starting length range.{creator_note}"
     )
 
     titles_preview = ", ".join(
         (v.get("title") or "")[:48] for v in top_videos[:3] if v.get("title")
     ) or "top titles in the sample"
 
-    concept = (
-        f"Pilot: “I ranked {topic} spots by [one specific criterion] — here is the honest order.” "
-        f"Build a clear arc (intro hook → locations → verdict). Inspired by patterns in: {titles_preview}."
-    )
+    if mode == "format_flip":
+        concept = (
+            f"Pilot: “I tested 3 ways to do {topic} and only one actually worked.” "
+            f"Use a challenge arc (promise → tests → winner). Inspired by: {titles_preview}."
+        )
+    else:
+        concept = (
+            f"Pilot: “I ranked {topic} spots by [one specific criterion] — here is the honest order.” "
+            f"Build a clear arc (intro hook → locations → verdict). Inspired by: {titles_preview}."
+        )
 
     bucket = best_duration.get("duration_bucket", "1-3m")
     prod_lines = [
@@ -101,11 +123,21 @@ def _fallback_creator_brief(analysis: Dict[str, Any]) -> Dict[str, Any]:
         )
     if confidence.get("message"):
         prod_lines.append(f"- Note: {confidence['message']}")
+    if creator_profile:
+        prod_lines.append(
+            f"- Creator fit: adapt tone/examples to this channel profile: {creator_profile}."
+        )
 
-    diff = (
-        f"If many top titles repeat “best” or generic rankings, differentiate with a constraint, "
-        f"a format flip, or a POV flip (tourist vs local) — pick one and commit."
-    )
+    if mode == "format_flip":
+        diff = (
+            "Most top titles compete on list/ranking framing. Differentiate with a test-lab format: "
+            "same topic, multiple approaches, one winner with explicit scoring."
+        )
+    else:
+        diff = (
+            "If many top titles repeat generic ranking language, differentiate with a POV flip "
+            "(parent-with-kids lens, budget lens, or time-crunched lens)."
+        )
 
     return {
         "opportunity_statement": opp,
@@ -115,10 +147,19 @@ def _fallback_creator_brief(analysis: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-def generate_creator_brief(analysis: Dict[str, Any]) -> Dict[str, Any]:
+def _fallback_creator_brief(analysis: Dict[str, Any], creator_profile: str = "") -> Dict[str, Any]:
+    return {
+        "ideas": [
+            _build_fallback_idea(analysis, creator_profile, mode="ranked"),
+            _build_fallback_idea(analysis, creator_profile, mode="format_flip"),
+        ]
+    }
+
+
+def generate_creator_brief(analysis: Dict[str, Any], creator_profile: str = "") -> Dict[str, Any]:
     project = os.getenv("GOOGLE_CLOUD_PROJECT")
     if not project:
-        return _fallback_creator_brief(analysis)
+        return _fallback_creator_brief(analysis, creator_profile=creator_profile)
 
     try:
         llm = ChatVertexAI(
@@ -126,31 +167,41 @@ def generate_creator_brief(analysis: Dict[str, Any]) -> Dict[str, Any]:
             temperature=0.4,
             project=project,
         )
-        structured_llm = llm.with_structured_output(CreatorBrief)
+        structured_llm = llm.with_structured_output(CreatorBriefIdeas)
 
-        system_instructions = """You are a YouTube content strategist who has studied thousands of food and creator videos. You think like a creative director, not an analyst. Your job is to give ONE creator ONE clear direction they could film tomorrow — not a vague report.
+        system_instructions = """You are a YouTube content strategist who has studied thousands of food and creator videos. You think like a creative director, not an analyst. Your job is to give ONE creator TWO clear directions they could film tomorrow — not a vague report.
 
 Ground everything in the ANALYSIS_JSON. Never give generic YouTube advice. Every sentence in your output must tie to a specific number, label, title pattern, keyword, sentiment theme, or trend from the data. If something is not in the data, say what is missing instead of guessing.
 
-High-performing food content often uses: ranking/tier lists, price comparisons, “hidden gem” framing, first-person challenges, or reactions to viral dishes — use these only when they match what appears in the top titles or comments for THIS topic.
+You will also get CREATOR_PROFILE. Adapt format, tone, pacing, and examples to that creator profile (niche, audience size, family-safe constraints, etc.).
 
-Produce exactly these four fields (plain text; production_brief may use lines starting with "- " for bullets):
+Return JSON with an ideas array of EXACTLY 2 objects. Each object must include these four fields:
 1) opportunity_statement — Why this topic is worth a video now, using upload_trend + engagement + sample size signals. Wrap key metrics in **double asterisks** (e.g. **5.8%**, **3300%**) so they scan easily.
 2) video_concept — Specific working title + premise + beats (not “make a ranking video”). Start lines with labels like "Working Title:", "Premise:", "Structure:" when possible; use numbered steps under Structure. Bold important numbers.
-3) production_brief — Tactical: length range from duration buckets/engagement curve signals, title patterns from top videos, hook patience vs avg length, comment themes as unanswered demand, and sponsor vs organic stats if present. Always include practical guidance for sponsorship or brand placement when relevant: where in the runtime to place reads (e.g. after first value beat, mid-roll), how to bridge from content to brand, disclosure placement, and what kinds of brands or categories fit the audience. Never advise the creator to avoid sponsorship, avoid sponsored content, or avoid sponsor language — creators often run sponsorships by necessity.
-4) differentiation_angle — What is repeated in top titles and one concrete twist (constraint, POV flip, or format flip).
+3) production_brief — Tactical: length range from duration buckets/engagement curve signals, title patterns from top videos, hook patience vs avg length, comment themes as unanswered demand, and sponsor vs organic stats if present. Always include practical guidance for sponsorship or brand placement when relevant: where in runtime to place reads, how to bridge from content to brand, disclosure placement, and suitable brand categories. Never advise avoiding sponsorship or avoiding sponsor language.
+4) differentiation_angle — What is repeated in top titles and one concrete twist.
+
+The 2 ideas must be materially different in angle and structure (not minor wording variants).
 
 The brief_confidence object is shown separately in the UI — do not repeat its disclaimer verbatim; focus on actionable insight."""
 
-        human_payload = f"ANALYSIS_JSON:\n{json.dumps(analysis, default=str)}"
+        human_payload = (
+            f"CREATOR_PROFILE:\n{creator_profile or 'Not provided'}\n\n"
+            f"ANALYSIS_JSON:\n{json.dumps(analysis, default=str)}"
+        )
 
         parsed = structured_llm.invoke(
             [SystemMessage(content=system_instructions), HumanMessage(content=human_payload)]
         )
-        return parsed.model_dump()
+        ideas = [idea.model_dump() for idea in parsed.ideas if idea]
+        if len(ideas) >= 2:
+            return {"ideas": ideas[:2]}
+        fallback = _fallback_creator_brief(analysis, creator_profile=creator_profile)
+        existing = ideas + fallback.get("ideas", [])
+        return {"ideas": existing[:2]}
     except Exception as e:
         print(f"Vertex AI Error: {e}")
-        return _fallback_creator_brief(analysis)
+        return _fallback_creator_brief(analysis, creator_profile=creator_profile)
 
 
 def extract_comment_themes_llm(comments: List[str]) -> List[str]:

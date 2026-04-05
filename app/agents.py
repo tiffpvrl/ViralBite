@@ -107,7 +107,8 @@ def analyst_node(state):
 
 def insight_node(state):
     analysis = state["analysis"]
-    creator_brief = generate_creator_brief(analysis)
+    creator_profile = (state.get("creator_profile") or "").strip()
+    creator_brief = generate_creator_brief(analysis, creator_profile=creator_profile)
 
     final_response = {
         "summary": analysis["summary"],

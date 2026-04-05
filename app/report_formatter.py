@@ -3,6 +3,7 @@ def format_report(query: str, analysis: dict, final_response: dict | None = None
     duration_patterns = analysis.get("duration_patterns", [])
     keyword_patterns = analysis.get("keyword_patterns", [])
     creator_brief = (final_response or {}).get("creator_brief", {})
+    brief_ideas = creator_brief.get("ideas") if isinstance(creator_brief, dict) else None
     brief_confidence = (final_response or {}).get("brief_confidence") or analysis.get("brief_confidence") or {}
 
     top_duration = None
@@ -39,7 +40,13 @@ def format_report(query: str, analysis: dict, final_response: dict | None = None
     lines.append("\nCREATOR BRIEF")
     if brief_confidence.get("message"):
         lines.append(f"- Confidence: {brief_confidence.get('message')}")
-    if creator_brief.get("opportunity_statement"):
+    if isinstance(brief_ideas, list) and brief_ideas:
+        for i, idea in enumerate(brief_ideas[:2], start=1):
+            lines.append(f"- Idea {i} Opportunity: {idea.get('opportunity_statement')}")
+            lines.append(f"- Idea {i} Video concept: {idea.get('video_concept')}")
+            lines.append(f"- Idea {i} Production brief: {idea.get('production_brief')}")
+            lines.append(f"- Idea {i} Differentiation: {idea.get('differentiation_angle')}")
+    elif creator_brief.get("opportunity_statement"):
         lines.append(f"- Opportunity: {creator_brief.get('opportunity_statement')}")
         lines.append(f"- Video concept: {creator_brief.get('video_concept')}")
         lines.append(f"- Production brief: {creator_brief.get('production_brief')}")

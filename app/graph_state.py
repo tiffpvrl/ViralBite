@@ -3,6 +3,7 @@ from typing import TypedDict, List, Dict, Any, NotRequired
 
 class ViralBiteState(TypedDict):
     query: str
+    creator_profile: NotRequired[str]
     max_results: NotRequired[int]
     max_comments_per_video: NotRequired[int]
     order: NotRequired[str]

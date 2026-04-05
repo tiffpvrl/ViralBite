@@ -73,6 +73,10 @@ def analyze(
         description="Maximum search.list pages (each up to 50 candidates) until enough long-form videos",
     ),
     max_comments: int = Query(10, ge=1, le=50, description="Top comments per video"),
+    creator_profile: str = Query(
+        "",
+        description="Optional creator channel context (niche, audience, brand constraints)",
+    ),
 ):
     result = run_topic_analysis(
         query=query,
@@ -81,6 +85,7 @@ def analyze(
         order=order,
         max_pages=max_pages,
         max_comments_per_video=max_comments,
+        creator_profile=creator_profile,
     )
     return clean_nan(result)
 
