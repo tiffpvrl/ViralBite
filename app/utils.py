@@ -16,7 +16,7 @@ def run_topic_analysis(
     window_days: int = 30,
     max_results: int = 35,
     order: str = "viewCount",
-    max_pages: int = 2,
+    max_pages: int = 10,
     max_comments_per_video: int = 10,
 ) -> dict:
     try:

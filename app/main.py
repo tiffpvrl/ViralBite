@@ -66,7 +66,12 @@ def analyze(
     days: int = Query(30, ge=1, le=365, description="Lookback window in days"),
     max_videos: int = Query(35, ge=1, le=50, description="Maximum videos to analyze"),
     order: str = Query("viewCount", description="YouTube search order"),
-    max_pages: int = Query(2, ge=1, le=3, description="Maximum search result pages"),
+    max_pages: int = Query(
+        10,
+        ge=1,
+        le=50,
+        description="Maximum search.list pages (each up to 50 candidates) until enough long-form videos",
+    ),
     max_comments: int = Query(10, ge=1, le=50, description="Top comments per video"),
 ):
     result = run_topic_analysis(

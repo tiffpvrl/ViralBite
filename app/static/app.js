@@ -27,7 +27,7 @@ const DEFAULT_ANALYZE_PARAMS = {
   days: 30,
   max_videos: 35,
   order: "viewCount",
-  max_pages: 2,
+  max_pages: 10,
   max_comments: 10,
 };
 

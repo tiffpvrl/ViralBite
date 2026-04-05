@@ -18,7 +18,7 @@ def collector_node(state):
     max_comments_per_video = int(state.get("max_comments_per_video", 10))
     order = state.get("order", "viewCount")
     window_days = state.get("window_days", 30)
-    max_pages = int(state.get("max_pages", 1))
+    max_pages = int(state.get("max_pages", 10))
 
     videos = collect_youtube_data(
         query=query,

@@ -5,6 +5,9 @@ from typing import Any, Dict, Optional
 
 from dotenv import load_dotenv
 from googleapiclient.discovery import build
+
+from app.analysis_tools import iso8601_duration_to_seconds, _min_duration_threshold
+
 try:
     from youtube_transcript_api import YouTubeTranscriptApi
 except Exception:
@@ -76,6 +79,58 @@ def _fetch_transcript_for_video(video_id: str) -> str:
         return ""
 
 
+def _video_record_from_detail(vid: str, detail: Dict[str, Any]) -> Dict[str, Any]:
+    snippet = detail.get("snippet", {})
+    statistics = detail.get("statistics", {})
+    content_details = detail.get("contentDetails", {})
+    status = detail.get("status", {})
+    topic_details = detail.get("topicDetails", {})
+
+    return {
+        "video_id": vid,
+
+        "title": snippet.get("title"),
+        "description": snippet.get("description"),
+        "channel_title": snippet.get("channelTitle"),
+        "channel_id": snippet.get("channelId"),
+        "published_at": snippet.get("publishedAt"),
+        "category_id": snippet.get("categoryId"),
+        "tags": snippet.get("tags", []),
+        "default_language": snippet.get("defaultLanguage"),
+        "default_audio_language": snippet.get("defaultAudioLanguage"),
+        "live_broadcast_content": snippet.get("liveBroadcastContent"),
+
+        "thumbnails": snippet.get("thumbnails", {}),
+
+        "view_count": int(statistics.get("viewCount", 0)) if statistics.get("viewCount") is not None else 0,
+        "like_count": int(statistics.get("likeCount", 0)) if statistics.get("likeCount") is not None else 0,
+        "favorite_count": int(statistics.get("favoriteCount", 0)) if statistics.get("favoriteCount") is not None else 0,
+        "comment_count": int(statistics.get("commentCount", 0)) if statistics.get("commentCount") is not None else 0,
+
+        "duration": content_details.get("duration"),
+        "dimension": content_details.get("dimension"),
+        "definition": content_details.get("definition"),
+        "caption": content_details.get("caption"),
+        "licensed_content": content_details.get("licensedContent"),
+        "projection": content_details.get("projection"),
+
+        "upload_status": status.get("uploadStatus"),
+        "privacy_status": status.get("privacyStatus"),
+        "license": status.get("license"),
+        "embeddable": status.get("embeddable"),
+        "public_stats_viewable": status.get("publicStatsViewable"),
+        "made_for_kids": status.get("madeForKids"),
+        "self_declared_made_for_kids": status.get("selfDeclaredMadeForKids"),
+
+        "topic_ids": topic_details.get("topicIds", []),
+        "relevant_topic_ids": topic_details.get("relevantTopicIds", []),
+        "topic_categories": topic_details.get("topicCategories", []),
+
+        "top_comments": [],
+        "transcript_text": "",
+    }
+
+
 def collect_youtube_data(
     query,
     max_results=25,
@@ -83,22 +138,25 @@ def collect_youtube_data(
     fetch_comments=True,
     order="viewCount",
     window_days: Optional[int] = 30,
-    max_pages: int = 1,
+    max_pages: int = 10,
 ):
     youtube = build("youtube", "v3", developerKey=API_KEY)
     target_results = max(1, min(int(max_results), 50))
-    page_limit = max(1, min(int(max_pages), 3))
+    page_limit = max(1, min(int(max_pages), 50))
     published_after = _to_rfc3339_utc(window_days)
-    search_items: list[dict[str, Any]] = []
-    seen_video_ids = set()
-    next_page_token = None
+    min_sec = _min_duration_threshold()
 
-    for _ in range(page_limit):
-        request_payload = {
+    qualifying: list[Dict[str, Any]] = []
+    seen_video_ids: set[str] = set()
+    next_page_token: Optional[str] = None
+    pages_fetched = 0
+
+    while len(qualifying) < target_results and pages_fetched < page_limit:
+        request_payload: Dict[str, Any] = {
             "q": query,
             "part": "snippet",
             "type": "video",
-            "maxResults": min(50, target_results),
+            "maxResults": 50,
             "order": order,
         }
         if next_page_token:
@@ -107,97 +165,44 @@ def collect_youtube_data(
             request_payload["publishedAfter"] = published_after
 
         search_response = youtube.search().list(**request_payload).execute()
-        for item in search_response.get("items", []):
+        page_items = search_response.get("items", [])
+        if not page_items:
+            break
+
+        page_ids: list[str] = []
+        for item in page_items:
             video_id = item.get("id", {}).get("videoId")
             if not video_id or video_id in seen_video_ids:
                 continue
             seen_video_ids.add(video_id)
-            search_items.append(item)
-            if len(search_items) >= target_results:
-                break
+            page_ids.append(video_id)
 
-        if len(search_items) >= target_results:
-            break
+        if page_ids:
+            details_response = youtube.videos().list(
+                part="snippet,statistics,contentDetails,status,topicDetails",
+                id=",".join(page_ids),
+            ).execute()
+            details_map = {item["id"]: item for item in details_response.get("items", [])}
+
+            for vid in page_ids:
+                if len(qualifying) >= target_results:
+                    break
+                detail = details_map.get(vid)
+                if not detail:
+                    continue
+                duration_sec = iso8601_duration_to_seconds(
+                    (detail.get("contentDetails") or {}).get("duration", "")
+                )
+                if min_sec > 0 and duration_sec <= min_sec:
+                    continue
+                qualifying.append(_video_record_from_detail(vid, detail))
+
+        pages_fetched += 1
         next_page_token = search_response.get("nextPageToken")
         if not next_page_token:
             break
 
-    search_items = search_items[:target_results]
-    video_ids = [item["id"]["videoId"] for item in search_items if item.get("id", {}).get("videoId")]
-
-    if not video_ids:
-        return []
-
-    details_response = youtube.videos().list(
-        part="snippet,statistics,contentDetails,status,topicDetails",
-        id=",".join(video_ids)
-    ).execute()
-
-    details_map = {item["id"]: item for item in details_response.get("items", [])}
-
-    videos = []
-    for search_item in search_items:
-        vid = search_item["id"]["videoId"]
-        detail = details_map.get(vid, {})
-
-        snippet = detail.get("snippet", {})
-        statistics = detail.get("statistics", {})
-        content_details = detail.get("contentDetails", {})
-        status = detail.get("status", {})
-        topic_details = detail.get("topicDetails", {})
-
-        video_record = {
-            "video_id": vid,
-
-            # snippet / basic descriptive metadata
-            "title": snippet.get("title"),
-            "description": snippet.get("description"),
-            "channel_title": snippet.get("channelTitle"),
-            "channel_id": snippet.get("channelId"),
-            "published_at": snippet.get("publishedAt"),
-            "category_id": snippet.get("categoryId"),
-            "tags": snippet.get("tags", []),
-            "default_language": snippet.get("defaultLanguage"),
-            "default_audio_language": snippet.get("defaultAudioLanguage"),
-            "live_broadcast_content": snippet.get("liveBroadcastContent"),
-
-            # thumbnails
-            "thumbnails": snippet.get("thumbnails", {}),
-
-            # statistics
-            "view_count": int(statistics.get("viewCount", 0)) if statistics.get("viewCount") is not None else 0,
-            "like_count": int(statistics.get("likeCount", 0)) if statistics.get("likeCount") is not None else 0,
-            "favorite_count": int(statistics.get("favoriteCount", 0)) if statistics.get("favoriteCount") is not None else 0,
-            "comment_count": int(statistics.get("commentCount", 0)) if statistics.get("commentCount") is not None else 0,
-
-            # content details
-            "duration": content_details.get("duration"),
-            "dimension": content_details.get("dimension"),
-            "definition": content_details.get("definition"),
-            "caption": content_details.get("caption"),
-            "licensed_content": content_details.get("licensedContent"),
-            "projection": content_details.get("projection"),
-
-            # status
-            "upload_status": status.get("uploadStatus"),
-            "privacy_status": status.get("privacyStatus"),
-            "license": status.get("license"),
-            "embeddable": status.get("embeddable"),
-            "public_stats_viewable": status.get("publicStatsViewable"),
-            "made_for_kids": status.get("madeForKids"),
-            "self_declared_made_for_kids": status.get("selfDeclaredMadeForKids"),
-
-            # topic details
-            "topic_ids": topic_details.get("topicIds", []),
-            "relevant_topic_ids": topic_details.get("relevantTopicIds", []),
-            "topic_categories": topic_details.get("topicCategories", []),
-
-            # comments
-            "top_comments": [],
-            "transcript_text": "",
-        }
-
-        videos.append(video_record)
+    videos = qualifying[:target_results]
 
     if fetch_comments and videos:
         sorted_by_views = sorted(videos, key=lambda x: x.get("view_count", 0), reverse=True)
