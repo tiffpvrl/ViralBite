@@ -24,6 +24,10 @@ const creatorModalEl = document.getElementById("creator-profile-modal");
 const creatorProfileInputEl = document.getElementById("creator-profile-input");
 const creatorProfileSaveBtn = document.getElementById("creator-profile-save");
 const creatorProfilePreviewEl = document.getElementById("creator-profile-preview");
+const creatorProfileEditBtn = document.getElementById("creator-profile-edit");
+const creatorProfileModalEyebrowEl = document.getElementById("creator-profile-modal-eyebrow");
+const creatorProfileModalTitleEl = document.getElementById("creator-profile-modal-title");
+const creatorProfileModalCopyEl = document.getElementById("creator-profile-modal-copy");
 
 let durationChart = null;
 let uploadChart = null;
@@ -32,6 +36,7 @@ let latestAnalysis = null;
 let latestTopic = "";
 let chatHistory = [];
 let creatorProfile = "";
+let creatorProfileModalIsEdit = false;
 const DEFAULT_ANALYZE_PARAMS = {
   days: 30,
   max_videos: 35,
@@ -101,22 +106,59 @@ function persistCreatorProfile(value) {
   }
 }
 
+function closeCreatorProfileModal() {
+  if (!creatorModalEl) return;
+  creatorModalEl.classList.add("hidden");
+  creatorModalEl.setAttribute("aria-hidden", "true");
+}
+
+function openCreatorProfileModal(edit) {
+  creatorProfileModalIsEdit = Boolean(edit);
+  if (!creatorModalEl || !creatorProfileInputEl) return;
+  creatorProfileInputEl.value = creatorProfile;
+  if (creatorProfileModalIsEdit) {
+    if (creatorProfileModalEyebrowEl) creatorProfileModalEyebrowEl.textContent = "Your profile";
+    if (creatorProfileModalTitleEl) creatorProfileModalTitleEl.textContent = "Update creator context";
+    if (creatorProfileModalCopyEl) {
+      creatorProfileModalCopyEl.textContent =
+        "Edit what we use to tailor brief ideas. You can clear the field to remove saved context.";
+    }
+    if (creatorProfileSaveBtn) creatorProfileSaveBtn.textContent = "Save changes";
+  } else {
+    if (creatorProfileModalEyebrowEl) creatorProfileModalEyebrowEl.textContent = "Before we start";
+    if (creatorProfileModalTitleEl) creatorProfileModalTitleEl.textContent = "Who are you as a creator?";
+    if (creatorProfileModalCopyEl) {
+      creatorProfileModalCopyEl.textContent =
+        "Share your channel context (niche, audience, constraints). Example: Mommy vlogger. 500K subscribers. Family-friendly, kids inspo videos.";
+    }
+    if (creatorProfileSaveBtn) creatorProfileSaveBtn.textContent = "Save profile and continue";
+  }
+  creatorModalEl.classList.remove("hidden");
+  creatorModalEl.setAttribute("aria-hidden", "false");
+  creatorProfileInputEl.focus();
+}
+
 function initCreatorProfileModal() {
   const existing = localStorage.getItem("viralbite-creator-profile") || "";
   persistCreatorProfile(existing);
   if (!creatorModalEl || !creatorProfileInputEl || !creatorProfileSaveBtn) return;
-  creatorProfileInputEl.value = creatorProfile;
-  creatorModalEl.classList.remove("hidden");
-  creatorModalEl.setAttribute("aria-hidden", "false");
-  creatorProfileInputEl.focus();
+
+  if (creatorProfile) {
+    closeCreatorProfileModal();
+  } else {
+    openCreatorProfileModal(false);
+  }
 
   creatorProfileSaveBtn.addEventListener("click", () => {
     const text = creatorProfileInputEl.value.trim();
-    if (!text) return;
+    if (!creatorProfileModalIsEdit && !text) return;
     persistCreatorProfile(text);
-    creatorModalEl.classList.add("hidden");
-    creatorModalEl.setAttribute("aria-hidden", "true");
+    closeCreatorProfileModal();
   });
+
+  if (creatorProfileEditBtn) {
+    creatorProfileEditBtn.addEventListener("click", () => openCreatorProfileModal(true));
+  }
 
   creatorProfileInputEl.addEventListener("keydown", (e) => {
     if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
@@ -168,7 +210,7 @@ function setLoadingVisible(visible) {
 }
 
 function initDashboardTabs() {
-  const tabButtons = document.querySelectorAll(".dashboard-tab");
+  const tabButtons = document.querySelectorAll(".rail-nav-link[data-tab]");
   const panels = document.querySelectorAll("[data-tab-panel]");
   if (!tabButtons.length || !panels.length) return;
 
@@ -911,8 +953,7 @@ async function runAnalysis(topic) {
   const query = topic?.trim();
   if (!query) return;
   if (!creatorProfile) {
-    if (creatorModalEl) creatorModalEl.classList.remove("hidden");
-    if (creatorProfileInputEl) creatorProfileInputEl.focus();
+    openCreatorProfileModal(false);
     return;
   }
   setLoadingVisible(true);

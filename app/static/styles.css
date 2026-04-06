@@ -62,15 +62,14 @@
   --r-lg: 12px;
   --r-xl: 16px;
 
-  --font-sans: "DM Sans", system-ui, sans-serif;
-  --font-mono: "DM Mono", ui-monospace, monospace;
-  --font-brand: "Martian Mono", ui-monospace, monospace;
+  --font-sans: "IBM Plex Sans", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+  --font-brand: "Boldonse", system-ui, sans-serif;
 
   --reveal-duration: 0.65s;
   --reveal-y: 20px;
 
-  --tabs-h: 48px;
-  --anchor-offset: calc(var(--tabs-h) + 16px);
+  --anchor-offset: 24px;
 }
 
 [data-theme="dark"] {
@@ -139,8 +138,9 @@
   outline-color: var(--cream-bright);
 }
 
-.dashboard-tab:focus-visible {
+.rail-nav-link:focus-visible {
   outline-offset: 2px;
+  border-radius: var(--r-sm);
 }
 
 .topic-pill:focus-visible,
@@ -311,10 +311,10 @@ body {
 .brand-title {
   margin: 0;
   font-family: var(--font-brand);
-  font-weight: 600;
+  font-weight: 400;
   font-size: clamp(2.25rem, 6vw, 3.25rem);
   line-height: 1.1;
-  letter-spacing: -0.04em;
+  letter-spacing: 0.02em;
 }
 
 .brand-viral {
@@ -931,42 +931,70 @@ input::placeholder {
   position: relative;
 }
 
-.dashboard-tabs {
+.rail-nav {
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--s-2);
-  margin-bottom: var(--s-4);
-  padding-bottom: var(--s-3);
-  border-bottom: 1px solid var(--border);
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  margin-bottom: auto;
 }
 
-.dashboard-tab {
+.rail-nav-link {
+  position: relative;
   font-family: var(--font-sans);
-  font-size: 14px;
-  font-weight: 600;
-  padding: var(--s-2) var(--s-4);
-  border-radius: var(--r-md);
-  border: 1px solid var(--border);
-  background: var(--bg-surface);
+  font-size: 15px;
+  font-weight: 500;
+  padding: 10px 12px 10px 22px;
+  margin: 0;
+  border: none;
+  border-radius: var(--r-sm);
+  background: transparent;
   color: var(--muted);
   cursor: pointer;
+  text-align: left;
+  width: 100%;
+  transition: color 0.2s ease;
+}
+
+.rail-nav-link::before {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  margin-top: -4px;
+  border-radius: 50%;
+  background: var(--chili);
+  transform: scale(0);
+  opacity: 0;
   transition:
-    background 0.2s ease,
-    color 0.2s ease,
-    border-color 0.2s ease,
-    box-shadow 0.2s ease;
+    transform 0.28s cubic-bezier(0.2, 0.85, 0.25, 1),
+    opacity 0.22s ease;
 }
 
-.dashboard-tab[aria-selected="true"] {
+.rail-nav-link:hover {
+  color: var(--text-body);
+}
+
+.rail-nav-link:hover::before {
+  transform: scale(1);
+  opacity: 0.55;
+}
+
+.rail-nav-link[aria-selected="true"] {
   color: var(--text);
-  background: var(--cream-bright);
-  border-color: var(--chili);
-  box-shadow: var(--shadow-panel);
 }
 
-[data-theme="dark"] .dashboard-tab[aria-selected="true"] {
-  background: var(--bg-surface-elevated);
-  border-color: var(--paprika);
+.rail-nav-link[aria-selected="true"]::before {
+  transform: scale(1);
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rail-nav-link::before {
+    transition: none;
+  }
 }
 
 .tab-panel[hidden] {
@@ -1589,19 +1617,6 @@ th {
   margin-bottom: 0;
 }
 
-.rail-tabs {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  border-bottom: none;
-  padding-bottom: 0;
-  margin-bottom: auto;
-}
-
-.rail-tabs .dashboard-tab {
-  justify-content: flex-start;
-  text-align: left;
-}
 
 .rail-brand {
   margin-top: auto;
@@ -1619,63 +1634,44 @@ th {
 .right-stage {
   min-height: 100vh;
   padding: 18px 26px 32px;
+  padding-bottom: max(32px, env(safe-area-inset-bottom, 0px));
 }
 
-.stage-hero {
-  position: relative;
-  min-height: 360px;
-  margin-bottom: 18px;
-  border-radius: 18px;
-  border: 1px solid var(--border);
-  background:
-    linear-gradient(rgba(18, 17, 14, 0.18), rgba(18, 17, 14, 0.35)),
-    radial-gradient(circle at 62% 38%, rgba(245, 192, 122, 0.5), transparent 42%),
-    radial-gradient(circle at 30% 58%, rgba(232, 114, 74, 0.34), transparent 44%),
-    repeating-linear-gradient(
-      0deg,
-      rgba(255, 255, 255, 0.08),
-      rgba(255, 255, 255, 0.08) 1px,
-      transparent 1px,
-      transparent 84px
-    ),
-    repeating-linear-gradient(
-      90deg,
-      rgba(255, 255, 255, 0.08),
-      rgba(255, 255, 255, 0.08) 1px,
-      transparent 1px,
-      transparent 110px
-    ),
-    linear-gradient(115deg, #6f584a 0%, #7e6557 42%, #4e5f52 100%);
-  overflow: hidden;
+.theme-toggle-dock {
+  position: fixed;
+  right: max(16px, env(safe-area-inset-right, 0px));
+  bottom: max(16px, env(safe-area-inset-bottom, 0px));
+  z-index: 900;
 }
 
-[data-theme="dark"] .stage-hero {
-  background:
-    linear-gradient(rgba(15, 11, 7, 0.25), rgba(15, 11, 7, 0.5)),
-    radial-gradient(circle at 62% 38%, rgba(245, 192, 122, 0.26), transparent 42%),
-    radial-gradient(circle at 30% 58%, rgba(232, 114, 74, 0.2), transparent 44%),
-    repeating-linear-gradient(
-      0deg,
-      rgba(255, 255, 255, 0.06),
-      rgba(255, 255, 255, 0.06) 1px,
-      transparent 1px,
-      transparent 84px
-    ),
-    repeating-linear-gradient(
-      90deg,
-      rgba(255, 255, 255, 0.06),
-      rgba(255, 255, 255, 0.06) 1px,
-      transparent 1px,
-      transparent 110px
-    ),
-    linear-gradient(115deg, #3c2f26 0%, #4f3b31 42%, #2f3b32 100%);
+.theme-toggle-dock .theme-toggle {
+  filter: drop-shadow(0 4px 14px rgba(26, 16, 8, 0.12));
 }
 
-.stage-hero .theme-toggle {
-  position: absolute;
-  top: 14px;
-  right: 14px;
-  z-index: 3;
+[data-theme="dark"] .theme-toggle-dock .theme-toggle {
+  filter: drop-shadow(0 4px 18px rgba(0, 0, 0, 0.45));
+}
+
+.rail-edit-profile {
+  margin-top: var(--s-3);
+  padding: var(--s-2) 0;
+  border: none;
+  background: none;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--chili);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.rail-edit-profile:hover {
+  color: var(--brick);
+}
+
+[data-theme="dark"] .rail-edit-profile {
+  color: var(--paprika);
 }
 
 #dashboard {
@@ -1763,9 +1759,15 @@ th {
     border-bottom: 1px solid var(--border);
   }
 
-  .rail-tabs {
+  .rail-nav {
     flex-direction: row;
-    margin-bottom: 0;
+    flex-wrap: wrap;
+    width: 100%;
+    margin-bottom: var(--s-3);
+  }
+
+  .rail-nav-link {
+    width: auto;
   }
 
   .right-stage {

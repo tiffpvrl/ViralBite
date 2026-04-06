@@ -6,29 +6,29 @@
   <title>ViralBite</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,400;0,500&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Martian+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Boldonse&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/static/styles.css" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
   <div id="creator-profile-modal" class="onboard-backdrop hidden" aria-hidden="true">
     <div class="onboard-modal panel">
-      <p class="eyebrow">Before we start</p>
-      <h2 class="onboard-title">Who are you as a creator?</h2>
-      <p class="onboard-copy">Share your channel context (niche, audience, constraints). Example: Mommy vlogger. 500K subscribers. Family-friendly, kids inspo videos.</p>
+      <p id="creator-profile-modal-eyebrow" class="eyebrow">Before we start</p>
+      <h2 id="creator-profile-modal-title" class="onboard-title">Who are you as a creator?</h2>
+      <p id="creator-profile-modal-copy" class="onboard-copy">Share your channel context (niche, audience, constraints). Example: Mommy vlogger. 500K subscribers. Family-friendly, kids inspo videos.</p>
       <textarea id="creator-profile-input" class="onboard-textarea" rows="4" placeholder="Describe your channel style and audience..."></textarea>
-      <button id="creator-profile-save" class="primary-btn">Save profile and continue</button>
+      <button type="button" id="creator-profile-save" class="primary-btn">Save profile and continue</button>
     </div>
   </div>
 
   <div class="site-shell">
     <aside class="left-rail">
       <p class="eyebrow rail-kicker">creator trend intelligence</p>
-      <div class="dashboard-tabs rail-tabs" role="tablist" aria-label="Dashboard views">
-        <button type="button" class="dashboard-tab" role="tab" id="tab-btn-analysis" aria-controls="tab-panel-analysis" aria-selected="true" data-tab="analysis">Analysis</button>
-        <button type="button" class="dashboard-tab" role="tab" id="tab-btn-brief" aria-controls="tab-panel-brief" aria-selected="false" data-tab="brief">Brief ideas</button>
-        <button type="button" class="dashboard-tab" role="tab" id="tab-btn-chat" aria-controls="tab-panel-chat" aria-selected="false" data-tab="chat">Chat</button>
-      </div>
+      <nav class="rail-nav" role="tablist" aria-label="Dashboard views">
+        <button type="button" class="rail-nav-link" role="tab" id="tab-btn-analysis" aria-controls="tab-panel-analysis" aria-selected="true" data-tab="analysis">Analysis</button>
+        <button type="button" class="rail-nav-link" role="tab" id="tab-btn-brief" aria-controls="tab-panel-brief" aria-selected="false" data-tab="brief">Brief ideas</button>
+        <button type="button" class="rail-nav-link" role="tab" id="tab-btn-chat" aria-controls="tab-panel-chat" aria-selected="false" data-tab="chat">Chat</button>
+      </nav>
 
       <div class="rail-brand">
         <h1 class="brand-title">
@@ -36,188 +36,189 @@
         </h1>
         <p class="hero-copy">Pick a trending topic, inspect the metrics, and get tailored creator brief ideas.</p>
         <p id="creator-profile-preview" class="muted">Creator context not set</p>
+        <button type="button" id="creator-profile-edit" class="rail-edit-profile">Edit profile</button>
       </div>
     </aside>
 
     <main class="right-stage">
-      <header class="stage-hero reveal-on-scroll">
-        <button type="button" id="theme-toggle" class="theme-toggle" role="switch" aria-checked="false" aria-labelledby="theme-toggle-label" title="Switch color theme">
-          <span id="theme-toggle-label" class="visually-hidden">Color theme: light</span>
-          <span class="theme-toggle-track" aria-hidden="true">
-            <span class="theme-toggle-thumb"></span>
-            <span class="theme-toggle-icons">
-              <span class="theme-toggle-sun">☀</span>
-              <span class="theme-toggle-moon">☾</span>
-            </span>
-          </span>
-        </button>
-      </header>
-
-      <section class="panel landing reveal-on-scroll">
-      <div class="section-title">
-        <h2>Today's trending topics</h2>
-        <span class="badge">hardcoded demo list</span>
-      </div>
-
-      <div class="topic-groups">
-        <div>
-          <h3>This week</h3>
-          <div id="weekly-topics" class="topic-row"></div>
-        </div>
-        <div>
-          <h3>Today</h3>
-          <div id="daily-topics" class="topic-row"></div>
-        </div>
-      </div>
-
-      <div class="custom-topic">
-        <input id="topic-input" type="text" placeholder="Type a custom topic (e.g., nyc bagel)" />
-        <button id="analyze-btn" class="primary-btn">Analyze Topic</button>
-      </div>
-      </section>
-
       <div id="loading" class="loading hidden" aria-live="polite" aria-busy="false">
-      <div class="loading-header">
-        <p class="loading-title">Running analysis</p>
-        <ol class="loading-steps" aria-label="Progress">
-          <li class="loading-step" data-step="0">Fetching videos &amp; comments</li>
-          <li class="loading-step" data-step="1">Scoring engagement &amp; patterns</li>
-          <li class="loading-step" data-step="2">Building your creator brief</li>
-        </ol>
-        <div class="loading-bar" aria-hidden="true">
-          <div class="loading-bar-fill" id="loading-bar-fill"></div>
+        <div class="loading-header">
+          <p class="loading-title">Running analysis</p>
+          <ol class="loading-steps" aria-label="Progress">
+            <li class="loading-step" data-step="0">Fetching videos &amp; comments</li>
+            <li class="loading-step" data-step="1">Scoring engagement &amp; patterns</li>
+            <li class="loading-step" data-step="2">Building your creator brief</li>
+          </ol>
+          <div class="loading-bar" aria-hidden="true">
+            <div class="loading-bar-fill" id="loading-bar-fill"></div>
+          </div>
         </div>
-      </div>
-      <div class="loading-skeleton" aria-hidden="true">
-        <div class="skeleton-block"></div>
-        <div class="skeleton-block skeleton-block--short"></div>
-        <div class="skeleton-grid">
-          <div class="skeleton-pill"></div>
-          <div class="skeleton-pill"></div>
-          <div class="skeleton-pill"></div>
+        <div class="loading-skeleton" aria-hidden="true">
+          <div class="skeleton-block"></div>
+          <div class="skeleton-block skeleton-block--short"></div>
+          <div class="skeleton-grid">
+            <div class="skeleton-pill"></div>
+            <div class="skeleton-pill"></div>
+            <div class="skeleton-pill"></div>
+          </div>
         </div>
-      </div>
       </div>
 
       <section id="dashboard" class="hidden">
-      <div id="tab-panel-analysis" role="tabpanel" aria-labelledby="tab-btn-analysis" class="tab-panel" data-tab-panel="analysis">
-        <div id="dash-overview" class="anchor-target">
-          <div class="overview-grid reveal-on-scroll" id="overview-cards"></div>
-          <div id="sample-definition" class="muted"></div>
-        </div>
+        <div id="tab-panel-analysis" role="tabpanel" aria-labelledby="tab-btn-analysis" class="tab-panel" data-tab-panel="analysis">
+          <section class="panel landing reveal-on-scroll">
+            <div class="section-title">
+              <h2>Today's trending topics</h2>
+              <span class="badge">hardcoded demo list</span>
+            </div>
 
-        <div id="dash-charts" class="anchor-target">
-          <div class="main-grid">
-            <section class="panel reveal-on-scroll chart-panel">
-              <div class="section-title">
-                <h2>Engagement by duration</h2>
+            <div class="topic-groups">
+              <div>
+                <h3>This week</h3>
+                <div id="weekly-topics" class="topic-row"></div>
               </div>
-              <p class="chart-summary" id="duration-chart-summary" aria-live="polite"></p>
-              <div class="chart-canvas-wrap">
-                <canvas id="durationChart"></canvas>
+              <div>
+                <h3>Today</h3>
+                <div id="daily-topics" class="topic-row"></div>
               </div>
-            </section>
+            </div>
 
-            <section class="panel reveal-on-scroll chart-panel">
-              <div class="section-title">
-                <h2>Upload frequency (last 8 weeks)</h2>
-              </div>
-              <p class="chart-summary" id="upload-chart-summary" aria-live="polite"></p>
-              <div class="chart-canvas-wrap">
-                <canvas id="uploadChart"></canvas>
-              </div>
-            </section>
+            <div class="custom-topic">
+              <input id="topic-input" type="text" placeholder="Type a custom topic (e.g., nyc bagel)" />
+              <button id="analyze-btn" class="primary-btn">Analyze Topic</button>
+            </div>
+          </section>
+
+          <div id="dash-overview" class="anchor-target">
+            <div class="overview-grid reveal-on-scroll" id="overview-cards"></div>
+            <div id="sample-definition" class="muted"></div>
           </div>
-        </div>
 
-        <div id="dash-insights" class="anchor-target insights-anchor">
-          <div class="insights-grid">
-            <section class="panel insight-panel reveal-on-scroll">
-              <div class="section-title">
-                <h2>Keyword signals</h2>
-              </div>
-              <p class="panel-subtitle">Keywords by avg engagement in titles/tags</p>
-              <div id="keyword-signals" class="keyword-list"></div>
-            </section>
-
-            <section class="panel insight-panel reveal-on-scroll">
-              <div class="section-title">
-                <h2>Comment sentiment</h2>
-              </div>
-              <p class="panel-subtitle">VADER analysis across top comments</p>
-              <div id="sentiment-bar" class="sentiment-bar"></div>
-              <div id="sentiment-legend" class="sentiment-legend" aria-hidden="true"></div>
-              <div id="sentiment-meta" class="insight-meta"></div>
-            </section>
-
-            <section class="panel insight-panel reveal-on-scroll">
-              <div class="section-title">
-                <h2>Sponsored vs organic</h2>
-              </div>
-              <p class="panel-subtitle">Detected via #ad / &quot;sponsored by&quot; in descriptions</p>
-              <div class="sponsor-insight">
-                <div class="sponsor-chart-wrap chart-canvas-wrap chart-canvas-wrap--donut">
-                  <canvas id="sponsorChart"></canvas>
+          <div id="dash-charts" class="anchor-target">
+            <div class="main-grid">
+              <section class="panel reveal-on-scroll chart-panel">
+                <div class="section-title">
+                  <h2>Engagement by duration</h2>
                 </div>
-                <div id="sponsor-legend" class="sponsor-legend"></div>
+                <p class="chart-summary" id="duration-chart-summary" aria-live="polite"></p>
+                <div class="chart-canvas-wrap">
+                  <canvas id="durationChart"></canvas>
+                </div>
+              </section>
+
+              <section class="panel reveal-on-scroll chart-panel">
+                <div class="section-title">
+                  <h2>Upload frequency (last 8 weeks)</h2>
+                </div>
+                <p class="chart-summary" id="upload-chart-summary" aria-live="polite"></p>
+                <div class="chart-canvas-wrap">
+                  <canvas id="uploadChart"></canvas>
+                </div>
+              </section>
+            </div>
+          </div>
+
+          <div id="dash-insights" class="anchor-target insights-anchor">
+            <div class="insights-grid">
+              <section class="panel insight-panel reveal-on-scroll">
+                <div class="section-title">
+                  <h2>Keyword signals</h2>
+                </div>
+                <p class="panel-subtitle">Keywords by avg engagement in titles/tags</p>
+                <div id="keyword-signals" class="keyword-list"></div>
+              </section>
+
+              <section class="panel insight-panel reveal-on-scroll">
+                <div class="section-title">
+                  <h2>Comment sentiment</h2>
+                </div>
+                <p class="panel-subtitle">VADER analysis across top comments</p>
+                <div id="sentiment-bar" class="sentiment-bar"></div>
+                <div id="sentiment-legend" class="sentiment-legend" aria-hidden="true"></div>
+                <div id="sentiment-meta" class="insight-meta"></div>
+              </section>
+
+              <section class="panel insight-panel reveal-on-scroll">
+                <div class="section-title">
+                  <h2>Sponsored vs organic</h2>
+                </div>
+                <p class="panel-subtitle">Detected via #ad / &quot;sponsored by&quot; in descriptions</p>
+                <div class="sponsor-insight">
+                  <div class="sponsor-chart-wrap chart-canvas-wrap chart-canvas-wrap--donut">
+                    <canvas id="sponsorChart"></canvas>
+                  </div>
+                  <div id="sponsor-legend" class="sponsor-legend"></div>
+                </div>
+                <div id="sponsor-meta" class="insight-meta"></div>
+              </section>
+            </div>
+          </div>
+
+          <div id="dash-videos" class="anchor-target">
+            <section class="panel reveal-on-scroll">
+              <div class="section-title">
+                <h2>Top performing videos</h2>
               </div>
-              <div id="sponsor-meta" class="insight-meta"></div>
+              <div class="table-wrap">
+                <table id="top-videos-table">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Title</th>
+                      <th>Views</th>
+                      <th>Engagement</th>
+                      <th>Length</th>
+                    </tr>
+                  </thead>
+                  <tbody></tbody>
+                </table>
+              </div>
             </section>
           </div>
         </div>
 
-        <div id="dash-videos" class="anchor-target">
-          <section class="panel reveal-on-scroll">
-            <div class="section-title">
-              <h2>Top performing videos</h2>
-            </div>
-            <div class="table-wrap">
-              <table id="top-videos-table">
-                <thead>
-                  <tr>
-                    <th>#</th>
-                    <th>Title</th>
-                    <th>Views</th>
-                    <th>Engagement</th>
-                    <th>Length</th>
-                  </tr>
-                </thead>
-                <tbody></tbody>
-              </table>
-            </div>
-          </section>
+        <div id="tab-panel-brief" role="tabpanel" aria-labelledby="tab-btn-brief" class="tab-panel" data-tab-panel="brief" hidden>
+          <div id="dash-brief" class="anchor-target brief-payoff">
+            <section class="panel creator-brief-panel reveal-on-scroll">
+              <p class="brief-eyebrow">Brief ideas</p>
+              <div class="section-title">
+                <h2 id="creator-brief-title">Two tailored brief ideas</h2>
+              </div>
+              <div id="brief-confidence" class="brief-confidence hidden" role="status"></div>
+              <div id="creator-brief-body" class="creator-brief-body"></div>
+            </section>
+          </div>
         </div>
-      </div>
 
-      <div id="tab-panel-brief" role="tabpanel" aria-labelledby="tab-btn-brief" class="tab-panel" data-tab-panel="brief" hidden>
-        <div id="dash-brief" class="anchor-target brief-payoff">
-          <section class="panel creator-brief-panel reveal-on-scroll">
-            <p class="brief-eyebrow">Brief ideas</p>
-            <div class="section-title">
-              <h2 id="creator-brief-title">Two tailored brief ideas</h2>
-            </div>
-            <div id="brief-confidence" class="brief-confidence hidden" role="status"></div>
-            <div id="creator-brief-body" class="creator-brief-body"></div>
-          </section>
+        <div id="tab-panel-chat" role="tabpanel" aria-labelledby="tab-btn-chat" class="tab-panel" data-tab-panel="chat" hidden>
+          <div id="dash-chat" class="anchor-target">
+            <section class="panel chat-panel reveal-on-scroll">
+              <div class="section-title">
+                <h2>Ask ViralBite Chat</h2>
+              </div>
+              <div id="chat-messages" class="chat-messages"></div>
+              <div class="chat-input-row">
+                <input id="chat-input" type="text" placeholder="Ask about the graphs or recommendations..." />
+                <button id="chat-send-btn" class="primary-btn">Send</button>
+              </div>
+            </section>
+          </div>
         </div>
-      </div>
-
-      <div id="tab-panel-chat" role="tabpanel" aria-labelledby="tab-btn-chat" class="tab-panel" data-tab-panel="chat" hidden>
-        <div id="dash-chat" class="anchor-target">
-          <section class="panel chat-panel reveal-on-scroll">
-            <div class="section-title">
-              <h2>Ask ViralBite Chat</h2>
-            </div>
-            <div id="chat-messages" class="chat-messages"></div>
-            <div class="chat-input-row">
-              <input id="chat-input" type="text" placeholder="Ask about the graphs or recommendations..." />
-              <button id="chat-send-btn" class="primary-btn">Send</button>
-            </div>
-          </section>
-        </div>
-      </div>
       </section>
     </main>
+  </div>
+
+  <div class="theme-toggle-dock">
+    <button type="button" id="theme-toggle" class="theme-toggle" role="switch" aria-checked="false" aria-labelledby="theme-toggle-label" title="Switch color theme">
+      <span id="theme-toggle-label" class="visually-hidden">Color theme: light</span>
+      <span class="theme-toggle-track" aria-hidden="true">
+        <span class="theme-toggle-thumb"></span>
+        <span class="theme-toggle-icons">
+          <span class="theme-toggle-sun">☀</span>
+          <span class="theme-toggle-moon">☾</span>
+        </span>
+      </span>
+    </button>
   </div>
 
   <script src="/static/app.js"></script>
