@@ -1250,60 +1250,167 @@ th {
   background: var(--cream-bright);
 }
 
-.brief-confidence {
+.brief-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 300px);
+  gap: var(--s-5);
+  align-items: start;
+}
+
+.brief-analysis-aside {
+  position: sticky;
+  top: var(--s-4);
+  align-self: start;
+}
+
+.brief-aside-inner {
+  border: 1px solid var(--border);
+  border-radius: var(--r-xl);
+  padding: var(--s-4);
+  background: var(--input-bg);
+  box-shadow: var(--shadow-panel);
+}
+
+.brief-aside-eyebrow {
+  margin: 0 0 var(--s-2);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--label);
+}
+
+.brief-aside-topic {
+  margin: 0 0 var(--s-2);
+  font-size: 1.05rem;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--text);
+  word-break: break-word;
+}
+
+.brief-aside-sample {
+  margin: 0 0 var(--s-4);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.brief-aside-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s-3);
   margin-bottom: var(--s-4);
 }
 
-.brief-confidence-inner {
+.brief-aside-metric {
   border: 1px solid var(--border);
-  border-radius: var(--r-lg);
-  padding: var(--s-3) var(--s-4);
-  background: var(--input-bg);
+  border-radius: var(--r-md);
+  padding: var(--s-3);
+  background: color-mix(in srgb, var(--cream-bright) 70%, var(--bg-surface));
 }
 
-.brief-confidence-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--s-2);
-  align-items: center;
+[data-theme="dark"] .brief-aside-metric {
+  background: var(--bg-surface-elevated);
 }
 
-.brief-confidence .brief-chip {
-  font-size: 12px;
-  padding: var(--s-1) var(--s-3);
-  display: inline-flex;
-  align-items: center;
-  cursor: default;
+.brief-aside-metric-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--label);
 }
 
-.brief-confidence .brief-chip:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-hover);
+.brief-aside-metric-value {
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--text);
+  margin: var(--s-1) 0;
+  line-height: 1.2;
 }
 
-.brief-confidence-msg {
-  margin: var(--s-3) 0 0;
+.brief-aside-metric-note {
+  font-size: 11px;
+  color: var(--toast);
+  line-height: 1.35;
+}
+
+.brief-aside-section {
+  margin-top: var(--s-4);
   padding-top: var(--s-3);
   border-top: 1px solid var(--border);
-  font-size: 13px;
-  color: var(--brick);
-  line-height: 1.5;
 }
 
-[data-theme="dark"] .brief-confidence-msg {
-  color: var(--saffron);
-}
-
-.brief-confidence-inner .brief-confidence-msg:first-child {
+.brief-aside-section:first-of-type {
   margin-top: 0;
-  padding-top: 0;
-  border-top: none;
+}
+
+.brief-aside-h {
+  margin: 0 0 var(--s-2);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--label);
+}
+
+.brief-aside-p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-body);
+}
+
+.brief-aside-kw-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.brief-aside-kw-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--s-2) 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.brief-aside-kw-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.brief-aside-kw-name {
+  font-weight: 600;
+  color: var(--text-body);
+}
+
+.brief-aside-kw-meta {
+  font-size: 12px;
+  color: var(--toast);
+}
+
+.brief-aside-sentiment-bar {
+  margin-bottom: var(--s-2);
+}
+
+.brief-aside-empty {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
 }
 
 .creator-brief-body {
   display: flex;
   flex-direction: column;
   gap: var(--s-4);
+  min-width: 0;
+}
+
+.brief-layout .brief-block-content {
+  max-width: none;
 }
 
 .brief-block-card {
@@ -1486,6 +1593,21 @@ th {
   padding: 0 0 0 18px;
   color: var(--text-body);
   line-height: 1.55;
+}
+
+@media (max-width: 900px) {
+  .brief-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .brief-analysis-aside {
+    position: static;
+    order: 1;
+  }
+
+  .creator-brief-body {
+    order: 0;
+  }
 }
 
 @media (max-width: 640px) {

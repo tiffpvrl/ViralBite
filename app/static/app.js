@@ -14,7 +14,6 @@ const sponsorMetaEl = document.getElementById("sponsor-meta");
 const sponsorLegendEl = document.getElementById("sponsor-legend");
 const topVideosBodyEl = document.querySelector("#top-videos-table tbody");
 const creatorBriefTitleEl = document.getElementById("creator-brief-title");
-const briefConfidenceEl = document.getElementById("brief-confidence");
 const creatorBriefBodyEl = document.getElementById("creator-brief-body");
 const chatMessagesEl = document.getElementById("chat-messages");
 const chatInputEl = document.getElementById("chat-input");
@@ -432,7 +431,7 @@ function renderDurationChart(patterns) {
       ],
     },
     options: {
-      responsive: true,
+        responsive: true,
       maintainAspectRatio: false,
       layout: { padding: { top: 10, right: 8, bottom: 6, left: 4 } },
       datasets: {
@@ -441,10 +440,10 @@ function renderDurationChart(patterns) {
           barPercentage: 0.88,
         },
       },
-      plugins: {
+        plugins: {
         legend: {
-          display: true,
-          labels: { color: C.legend, font: { size: 12, family: "'DM Sans', sans-serif" } },
+            display: true,
+          labels: { color: C.legend, font: { size: 12, family: "'IBM Plex Sans', sans-serif" } },
         },
         tooltip: {
           callbacks: {
@@ -520,8 +519,8 @@ function renderUploadChart(uploadFrequency) {
       maintainAspectRatio: false,
       layout: { padding: { top: 8, right: 6, bottom: 4, left: 4 } },
       plugins: { legend: { display: false } },
-      scales: {
-        x: {
+        scales: {
+            x: {
           ticks: { color: C.tick, maxRotation: 45, minRotation: 0, font: { size: 10 } },
           grid: { color: C.grid },
         },
@@ -841,52 +840,131 @@ function renderProductionBriefHtml(text) {
   return out || `<p class="brief-prose-muted">—</p>`;
 }
 
-function renderCreatorBrief(finalResponse, query) {
+function renderBriefAnalysisAside(analysis, query) {
+  const asideEl = document.getElementById("brief-analysis-aside");
+  if (!asideEl) return;
+
+  if (!analysis || typeof analysis !== "object") {
+    asideEl.innerHTML = `<p class="brief-aside-empty muted">Analyze a topic on the Analysis tab to see metrics alongside your briefs.</p>`;
+    return;
+  }
+
+  const topic = (query || "").trim();
+  const summary = analysis.summary || {};
+  const sampleDef = analysis.sample_definition || {};
+  const keywords = Array.isArray(analysis.keyword_patterns) ? analysis.keyword_patterns : [];
+  const sentiment = analysis.comment_sentiment || {};
+  const sponsorship = analysis.sponsorship || {};
+  const uploadFrequency = Array.isArray(analysis.upload_frequency) ? analysis.upload_frequency : [];
+
+  const days = sampleDef.window_days ?? DEFAULT_ANALYZE_PARAMS.days;
+  const fetched = sampleDef.fetched_videos ?? summary.num_videos ?? 0;
+  const analyzed = sampleDef.videos_analyzed ?? summary.num_videos ?? 0;
+  const order = sampleDef.order || DEFAULT_ANALYZE_PARAMS.order;
+
+  const uploadTotal = uploadFrequency.reduce((a, x) => a + (x.video_count || 0), 0);
+  const uploadLine = uploadFrequency.length
+    ? `${uploadFrequency.length} weeks · ${fmt(uploadTotal, 0)} uploads in window`
+    : "No upload cadence data";
+
+  const topKw = [...keywords]
+    .sort((a, b) => (b.avg_engagement_rate || 0) - (a.avg_engagement_rate || 0))
+    .slice(0, 5);
+
+  const pos = Number(sentiment.positive_pct) || 0;
+  const neu = Number(sentiment.neutral_pct) || 0;
+  const neg = Number(sentiment.negative_pct) || 0;
+
+  const spCount = sponsorship.sponsored_count || 0;
+  const orgCount = sponsorship.organic_count || 0;
+  const spTotal = spCount + orgCount;
+  const spPct = spTotal ? (spCount / spTotal) * 100 : 0;
+  const orgPct = spTotal ? (orgCount / spTotal) * 100 : 0;
+
+  const kwRows = topKw.length
+    ? topKw
+        .map((row) => {
+          const name = escapeHtml(truncateText(row.keyword || "", 28));
+          const eng = fmt((row.avg_engagement_rate || 0) * 100, 2);
+          const n = row.video_count ?? 0;
+          return `<li class="brief-aside-kw-item"><span class="brief-aside-kw-name">${name}</span><span class="brief-aside-kw-meta">${eng}% · ${fmt(n, 0)} videos</span></li>`;
+        })
+        .join("")
+    : `<li class="brief-aside-kw-item muted">No keyword signals in sample</li>`;
+
+  asideEl.innerHTML = `
+    <div class="brief-aside-inner">
+      <p class="brief-aside-eyebrow">Analysis snapshot</p>
+      <p class="brief-aside-topic">${escapeHtml(topic || "—")}</p>
+      <p class="brief-aside-sample muted">
+        Last ${fmt(days, 0)} days · order ${escapeHtml(String(order))} · fetched ${fmt(fetched, 0)} · analyzed ${fmt(analyzed, 0)} videos
+      </p>
+
+      <div class="brief-aside-metrics">
+        <div class="brief-aside-metric">
+          <div class="brief-aside-metric-label">Total views</div>
+          <div class="brief-aside-metric-value">${escapeHtml(fmt(summary.total_views || 0, 0))}</div>
+          <div class="brief-aside-metric-note">${escapeHtml(fmt(summary.num_videos || 0, 0))} videos</div>
+        </div>
+        <div class="brief-aside-metric">
+          <div class="brief-aside-metric-label">Avg engagement</div>
+          <div class="brief-aside-metric-value">${escapeHtml(fmt((summary.avg_engagement_rate || 0) * 100, 2))}%</div>
+          <div class="brief-aside-metric-note">likes + comments / views</div>
+        </div>
+        <div class="brief-aside-metric">
+          <div class="brief-aside-metric-label">Median views</div>
+          <div class="brief-aside-metric-value">${escapeHtml(fmt(summary.median_views || 0, 0))}</div>
+          <div class="brief-aside-metric-note">per video</div>
+        </div>
+        <div class="brief-aside-metric">
+          <div class="brief-aside-metric-label">Avg length</div>
+          <div class="brief-aside-metric-value">${escapeHtml(toMinutes(Math.round(summary.avg_duration_seconds || 0)))}</div>
+          <div class="brief-aside-metric-note">top bucket: ${escapeHtml(String(summary.dominant_duration_bucket || "—"))}</div>
+        </div>
+      </div>
+
+      <section class="brief-aside-section" aria-label="Upload cadence">
+        <h3 class="brief-aside-h">Upload cadence</h3>
+        <p class="brief-aside-p">${escapeHtml(uploadLine)}</p>
+      </section>
+
+      <section class="brief-aside-section" aria-label="Keyword signals">
+        <h3 class="brief-aside-h">Top keywords</h3>
+        <ul class="brief-aside-kw-list">${kwRows}</ul>
+      </section>
+
+      <section class="brief-aside-section" aria-label="Comment sentiment">
+        <h3 class="brief-aside-h">Comment sentiment</h3>
+        <div class="brief-aside-sentiment-bar sentiment-bar" aria-hidden="true">
+          <div class="seg positive" style="width:${pos}%">${fmt(pos, 0)}%</div>
+          <div class="seg neutral" style="width:${neu}%">${fmt(neu, 0)}%</div>
+          <div class="seg negative" style="width:${neg}%">${fmt(neg, 0)}%</div>
+        </div>
+        <p class="brief-aside-p muted">${escapeHtml(fmt(sentiment.num_comments_analyzed || 0, 0))} comments analyzed</p>
+      </section>
+
+      <section class="brief-aside-section" aria-label="Sponsored vs organic">
+        <h3 class="brief-aside-h">Sponsored vs organic</h3>
+        <p class="brief-aside-p">
+          <strong class="brief-em">${escapeHtml(fmt(orgPct, 0))}%</strong> organic (${escapeHtml(fmt(orgCount, 0))})
+          · <strong class="brief-em">${escapeHtml(fmt(spPct, 0))}%</strong> sponsored (${escapeHtml(fmt(spCount, 0))})
+        </p>
+      </section>
+    </div>`;
+}
+
+function renderCreatorBrief(finalResponse, query, analysis) {
   const topic = (query || "").trim() || "topic";
   if (creatorBriefTitleEl) {
     creatorBriefTitleEl.textContent = `Two ${topic} brief ideas for your channel`;
   }
 
+  renderBriefAnalysisAside(analysis, query);
+
   const brief = finalResponse?.creator_brief || {};
   const ideas = Array.isArray(brief?.ideas)
     ? brief.ideas.filter(Boolean)
     : (brief?.opportunity_statement ? [brief] : []);
-  const conf = finalResponse?.brief_confidence || {};
-
-  if (briefConfidenceEl) {
-    const chips = [];
-    let ci = 0;
-    if (conf.sample_size != null) {
-      const v = PILL_VARIANTS[ci++ % PILL_VARIANTS.length];
-      chips.push(
-        `<span class="brief-chip pill pill--${v}" title="Videos in analysis sample">n=${escapeHtml(fmt(conf.sample_size, 0))}</span>`
-      );
-    }
-    if (conf.unique_channels != null) {
-      const v = PILL_VARIANTS[ci++ % PILL_VARIANTS.length];
-      chips.push(
-        `<span class="brief-chip pill pill--${v}" title="Distinct channels">${escapeHtml(fmt(conf.unique_channels, 0))} channels</span>`
-      );
-    }
-    if (conf.top_two_channel_share_pct != null) {
-      const v = PILL_VARIANTS[ci++ % PILL_VARIANTS.length];
-      chips.push(
-        `<span class="brief-chip pill pill--${v}" title="Share of views from the two largest channels">Top 2 ch. ${escapeHtml(fmt(conf.top_two_channel_share_pct, 0))}%</span>`
-      );
-    }
-
-    if (!chips.length && !conf.message) {
-      briefConfidenceEl.classList.add("hidden");
-      briefConfidenceEl.innerHTML = "";
-    } else {
-      briefConfidenceEl.classList.remove("hidden");
-      briefConfidenceEl.innerHTML = `
-        <div class="brief-confidence-inner">
-          ${chips.length ? `<div class="brief-confidence-chips">${chips.join("")}</div>` : ""}
-          ${conf.message ? `<p class="brief-confidence-msg">${escapeHtml(conf.message)}</p>` : ""}
-        </div>`;
-    }
-  }
 
   if (!creatorBriefBodyEl) return;
 
@@ -944,7 +1022,7 @@ function renderDashboard(payload) {
   renderSentiment(analysis.comment_sentiment || {});
   renderSponsor(analysis.sponsorship || {});
   renderTopVideos(analysis.top_videos || []);
-  renderCreatorBrief(payload.final_response || {}, payload.query);
+  renderCreatorBrief(payload.final_response || {}, payload.query, payload.analysis || {});
 
   dashboardEl.classList.remove("hidden");
   if (window.__viralbiteSetActiveTab) {
