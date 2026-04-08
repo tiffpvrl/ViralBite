@@ -1,0 +1,20 @@
+.dockerignore
+.gcloudignore
+.git
+.gitignore
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+
+# Secrets
+.env
+
+# IDE and OS
+.vscode/
+.idea/
+.DS_Store
