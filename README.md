@@ -5,7 +5,7 @@
 ---
 ## Live URL for Running
 
-TODO: INSERT URL HERE
+https://viralbite-1003029735859.us-central1.run.app
 
 ---
 
