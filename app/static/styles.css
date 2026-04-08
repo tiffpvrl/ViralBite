@@ -1,50 +1,50 @@
-/* ViralBite style kit — palette + spacing + type */
+/* ViralBite style kit — YouTube-inspired palette + spacing + type */
 :root {
-  /* Color palette */
-  --chili: #c84b2f;
-  --paprika: #e8724a;
-  --terracotta: #a64d33;
-  --cream: #fdf0ea;
-  --cream-tag: #fdf5f0;
-  --cream-bright: #fff5e9;
-  --espresso: #1a1008;
-  --brand-viral: #4a2c2a;
-  --brand-bite: #a64d33;
-  --parchment: #fdf6ec;
-  --brick: #8b3520;
-  --saffron: #f5c07a;
-  --herb: #2d6a45;
-  --herb-dark: #2e7d32;
+  /* Brand tokens (legacy names; values match youtube.com light UI) */
+  --chili: #ff0000;
+  --paprika: #ff4e45;
+  --terracotta: #cc0000;
+  --cream: #f9f9f9;
+  --cream-tag: #f0f0f0;
+  --cream-bright: #ffffff;
+  --espresso: #0f0f0f;
+  --brand-viral: #0f0f0f;
+  --brand-bite: #ff0000;
+  --parchment: #ffffff;
+  --brick: #9a0000;
+  --saffron: #065fd4;
+  --herb: #2ba640;
+  --herb-dark: #1e7e34;
   --mint-bg: #e8f5e9;
-  --toast: #8b6a4a;
-  --linen: #e8e0d6;
+  --toast: #606060;
+  --linen: #e5e5e5;
 
-  /* Semantic (light) — warm surfaces vs page for contrast */
+  /* Semantic (light) — white / #f9f9f9 surfaces like YouTube */
   --bg-page: var(--parchment);
   --bg-hero: var(--parchment);
-  --bg-surface: #f6e4d8;
-  --bg-surface-elevated: #fff4eb;
+  --bg-surface: #f9f9f9;
+  --bg-surface-elevated: #ffffff;
   --text: var(--espresso);
   --text-inverse: #ffffff;
-  --text-body: #3d3530;
+  --text-body: #212121;
   --muted: var(--toast);
   --label: #888888;
   --border: var(--linen);
   --accent: var(--chili);
   --accent-secondary: var(--paprika);
   --accent-strong: var(--brick);
-  --input-bg: #fff8f2;
-  --shadow-panel: 0 1px 0 rgba(26, 16, 8, 0.04);
-  --shadow-hover: 0 8px 24px rgba(26, 16, 8, 0.12);
+  --input-bg: #ffffff;
+  --shadow-panel: 0 1px 0 rgba(15, 15, 15, 0.06);
+  --shadow-hover: 0 8px 24px rgba(15, 15, 15, 0.12);
 
-  /* Charts (read by JS) */
-  --chart-paprika: rgba(232, 114, 74, 0.88);
-  --chart-chili: rgba(200, 75, 47, 0.92);
-  --chart-brick: #8b3520;
-  --chart-saffron: rgba(245, 192, 122, 0.95);
-  --chart-grid: rgba(232, 224, 216, 0.85);
-  --chart-tick: #8b6a4a;
-  --chart-legend: #1a1008;
+  /* Charts (read by JS) — red family + link blue */
+  --chart-paprika: rgba(255, 78, 69, 0.9);
+  --chart-chili: rgba(255, 0, 0, 0.92);
+  --chart-brick: #9a0000;
+  --chart-saffron: rgba(6, 95, 212, 0.88);
+  --chart-grid: rgba(0, 0, 0, 0.08);
+  --chart-tick: #606060;
+  --chart-legend: #0f0f0f;
 
   /* Spacing scale */
   --s-1: 4px;
@@ -73,31 +73,31 @@
 }
 
 [data-theme="dark"] {
-  --bg-page: #141008;
-  --bg-hero: #141008;
-  --bg-surface: #2a2218;
-  --bg-surface-elevated: #3a3028;
-  --text: #f5ebe0;
-  --text-body: #e4d9cc;
-  --muted: #c4b8a8;
-  --label: #b8a898;
-  --border: #524538;
-  --input-bg: #231a12;
-  --shadow-panel: 0 4px 24px rgba(0, 0, 0, 0.35);
-  --shadow-hover: 0 12px 32px rgba(0, 0, 0, 0.45);
-  --brand-viral: #fdf6ec;
-  --brand-bite: #f0a080;
-  --cream-bright: #2f261c;
-  --cream-tag: #2a2218;
-  --toast: #c9b8a4;
+  --bg-page: #0f0f0f;
+  --bg-hero: #0f0f0f;
+  --bg-surface: #212121;
+  --bg-surface-elevated: #272727;
+  --text: #f1f1f1;
+  --text-body: #e0e0e0;
+  --muted: #aaaaaa;
+  --label: #9a9a9a;
+  --border: #3f3f3f;
+  --input-bg: #121212;
+  --shadow-panel: 0 4px 24px rgba(0, 0, 0, 0.45);
+  --shadow-hover: 0 12px 32px rgba(0, 0, 0, 0.55);
+  --brand-viral: #f1f1f1;
+  --brand-bite: #ff4e45;
+  --cream-bright: #272727;
+  --cream-tag: #212121;
+  --toast: #aaaaaa;
 
-  --chart-paprika: rgba(240, 160, 128, 0.92);
-  --chart-chili: rgba(232, 114, 74, 0.9);
-  --chart-brick: #f0c8b8;
-  --chart-saffron: rgba(245, 200, 140, 0.88);
-  --chart-grid: rgba(255, 255, 255, 0.1);
-  --chart-tick: #d8ccc0;
-  --chart-legend: #f5ebe0;
+  --chart-paprika: rgba(255, 78, 69, 0.95);
+  --chart-chili: rgba(255, 62, 62, 0.95);
+  --chart-brick: #ff9b97;
+  --chart-saffron: rgba(62, 166, 255, 0.88);
+  --chart-grid: rgba(255, 255, 255, 0.12);
+  --chart-tick: #aaaaaa;
+  --chart-legend: #f1f1f1;
 }
 
 * { box-sizing: border-box; }
@@ -569,7 +569,7 @@ body {
 .keyword-chip.pill--terra {
   background: var(--terracotta);
   color: #ffffff;
-  border-color: #8f3d26;
+  border-color: var(--brick);
 }
 
 .pill--cream,

@@ -56,13 +56,13 @@ function chartPalette() {
     return v || fallback;
   };
   return {
-    paprika: g("--chart-paprika", "rgba(232, 114, 74, 0.88)"),
-    chili: g("--chart-chili", "rgba(200, 75, 47, 0.92)"),
-    brick: g("--chart-brick", "#8b3520"),
-    saffron: g("--chart-saffron", "rgba(245, 192, 122, 0.95)"),
-    grid: g("--chart-grid", "rgba(232, 224, 216, 0.85)"),
-    tick: g("--chart-tick", "#8b6a4a"),
-    legend: g("--chart-legend", "#1a1008"),
+    paprika: g("--chart-paprika", "rgba(255, 78, 69, 0.9)"),
+    chili: g("--chart-chili", "rgba(255, 0, 0, 0.92)"),
+    brick: g("--chart-brick", "#9a0000"),
+    saffron: g("--chart-saffron", "rgba(6, 95, 212, 0.88)"),
+    grid: g("--chart-grid", "rgba(0, 0, 0, 0.08)"),
+    tick: g("--chart-tick", "#606060"),
+    legend: g("--chart-legend", "#0f0f0f"),
   };
 }
 
