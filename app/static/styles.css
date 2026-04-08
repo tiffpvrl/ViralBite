@@ -1627,6 +1627,13 @@ th {
   min-height: min(72vh, 640px);
 }
 
+.chat-panel-hint {
+  margin: var(--s-2) 0 0;
+  max-width: 42rem;
+  font-weight: 400;
+  line-height: 1.5;
+}
+
 .chat-messages {
   border: 1px solid var(--border);
   border-radius: var(--r-md);

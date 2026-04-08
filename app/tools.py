@@ -1,3 +1,8 @@
+"""
+Legacy LangChain tool stubs — not used by `/analyze`.
+
+EDA tools for the assignment rubric live in `app/eda_agent.py` (`build_eda_tools`).
+"""
 import json
 from langchain.tools import tool
 

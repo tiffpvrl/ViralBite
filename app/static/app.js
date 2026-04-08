@@ -32,6 +32,7 @@ let durationChart = null;
 let uploadChart = null;
 let sponsorChart = null;
 let latestAnalysis = null;
+let latestFinalResponse = null;
 let latestTopic = "";
 let chatHistory = [];
 let creatorProfile = "";
@@ -377,8 +378,12 @@ function renderOverview(summary, sampleDefinition) {
   const excluded = sampleDefinition?.excluded_not_longer_than_threshold ?? 0;
   const threshold = sampleDefinition?.min_duration_seconds_threshold ?? 60;
   const transcriptCount = sampleDefinition?.videos_with_transcript ?? 0;
+  const ytQ = sampleDefinition?.effective_youtube_query;
+  const searchLine = ytQ
+    ? ` YouTube search used: "${ytQ}".`
+    : "";
   sampleDefinitionEl.textContent =
-    `Fetched ${fmt(fetched, 0)} videos; analysis uses ${fmt(analyzed, 0)} with duration > ${threshold}s (${fmt(excluded, 0)} ≤${threshold}s excluded). Last ${days} days, order: ${order}. Transcripts: ${fmt(transcriptCount, 0)} videos.`;
+    `Fetched ${fmt(fetched, 0)} videos; analysis uses ${fmt(analyzed, 0)} with duration > ${threshold}s (${fmt(excluded, 0)} ≤${threshold}s excluded). Last ${days} days, order: ${order}. Transcripts: ${fmt(transcriptCount, 0)} videos.${searchLine}`;
 }
 
 function renderDurationChart(patterns) {
@@ -731,6 +736,8 @@ async function sendChat() {
       analysis: latestAnalysis,
       history: chatHistory,
       message,
+      creator_profile: creatorProfile,
+      final_response: latestFinalResponse,
     }),
   });
 
@@ -1006,14 +1013,26 @@ function renderCreatorBrief(finalResponse, query, analysis) {
   `;
 }
 
+const CHAT_WELCOME = `Loaded analysis for **${"TOPIC"}**.
+
+**What you can ask:** duration buckets, upload trend, keywords, comments/sentiment, sponsorship, top videos, how the sample was built, or your creator brief ideas. Answers use **tool calls** over this dashboard only.
+
+**What chat can't do:** fetch new YouTube data or change the sample — run **Analyze** again for a fresh topic or settings.
+
+Your **creator profile** is included when you chat so advice can match your niche.`;
+
 function renderDashboard(payload) {
   lastDashboardPayload = payload;
   const analysis = payload.analysis || {};
   latestAnalysis = analysis;
+  latestFinalResponse = payload.final_response != null ? payload.final_response : null;
   latestTopic = payload.query || topicInput.value.trim();
   chatHistory = [];
   chatMessagesEl.innerHTML = "";
-  addChatMessage("assistant", `Loaded context for "${latestTopic}". Ask me anything about the dashboard.`);
+  addChatMessage(
+    "assistant",
+    CHAT_WELCOME.replace("TOPIC", latestTopic)
+  );
 
   renderOverview(analysis.summary || {}, analysis.sample_definition || {});
   renderDurationChart(analysis.duration_patterns || []);

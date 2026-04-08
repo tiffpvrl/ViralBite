@@ -15,6 +15,8 @@ Set environment variables:
 - `GOOGLE_CLOUD_PROJECT` (for Vertex AI creator brief + chat)
 - `VERTEXAI_CREATOR_MODEL` (optional, defaults to `gemini-2.5-pro`) — NLP summary / creator brief
 - `VERTEXAI_CHAT_MODEL` (optional, defaults to `gemini-2.5-flash`) — `/chat` assistant
+- `VERTEXAI_COLLECTION_MODEL` (optional, defaults to `gemini-2.0-flash` via `VERTEXAI_CHAT_MODEL` / `VERTEXAI_MODEL`) — Vertex model that **issues the collection tool call** (`fetch_youtube_sample`) in `app/collection_agent.py` when `GOOGLE_CLOUD_PROJECT` is set
+- `VERTEXAI_EDA_MODEL` (optional, defaults to `gemini-2.0-flash`) — Vertex model that **issues EDA tool calls** in `app/eda_agent.py` when `GOOGLE_CLOUD_PROJECT` is set
 - `VERTEXAI_MODEL` (optional legacy) — if set, used when `VERTEXAI_CREATOR_MODEL` or `VERTEXAI_CHAT_MODEL` is omitted
 - `VERTEXAI_THEME_MODEL` (optional, defaults to `gemini-1.5-flash`)
 - `VIRALBITE_CACHE_TTL_SECONDS` (optional, defaults to `600`)
@@ -48,16 +50,18 @@ The frontend uses the defaults above and the dashboard now includes a sample def
 
 ## Product flow
 
-1. **Collect**: pull topic-matched YouTube videos and comments from the API.
-2. **EDA**: compute structured trend metrics for creator decision making.
+1. **Collect (tool calling)**: a LangChain `@tool` (`fetch_youtube_sample` in `app/collection_agent.py`) wraps `collect_youtube_data`. When `GOOGLE_CLOUD_PROJECT` is set, a Vertex model **calls that tool once** with `youtube_search_query` chosen from the user topic plus optional **creator profile** (so search can target the right audience, e.g. kids/family vs generic). Without Vertex, the tool runs with a deterministic query (`topic` + profile text).
+2. **EDA (Option B — tool calling)**: exploratory metrics are computed **only** inside LangChain `@tool` functions in `app/eda_agent.py` (`build_eda_tools`). When `GOOGLE_CLOUD_PROJECT` is set, a Vertex model (`bind_tools`) is prompted to invoke **each** EDA tool once; if Vertex is not configured, the **same** tools are invoked deterministically in-process (still LangChain `BaseTool.invoke`, not ad-hoc pandas in `analyst_node`). Assembly-only fields (`sample_definition`, optional LLM comment themes) are added in `analyst_node` after tools return.
 3. **Hypothesize**: generate a creator brief with concrete recommendations.
+
+**Chat tab:** `POST /chat` runs a Vertex model with **LangChain tools** defined in `build_chat_analysis_tools()` (`app/chat_tools.py`) that read only from the current **analysis** JSON and optional **final_response** (brief). The request includes **creator_profile** so answers can match the saved creator context. Chat does **not** re-hit YouTube; users must run **Analyze** again for a new sample.
 
 ## Architecture (LangGraph)
 
 State machine in `app/graph.py` with three nodes:
 
-- `collector_node` (`app/agents.py`): fetches topic data.
-- `analyst_node` (`app/agents.py`): computes analysis features.
+- `collector_node` (`app/agents.py`): `run_collection_with_tool_calling_agent()` — `app/collection_agent.py` (`fetch_youtube_sample` tool).
+- `analyst_node` (`app/agents.py`): runs `run_eda_with_tool_calling_agent()` (`app/eda_agent.py`), then enriches comment themes via `extract_comment_themes_llm` and builds `sample_definition`.
 - `insight_node` (`app/agents.py`): calls LLM for creator brief.
 
 State schema: `app/graph_state.py`.
@@ -65,12 +69,16 @@ State schema: `app/graph_state.py`.
 ## File map by rubric step
 
 - **Graph wiring**: `app/utils.py` invokes `build_graph().invoke(...)`
-- **Upload frequency**: `analyze_upload_frequency()` in `app/analysis_tools.py`
-- **Comment sentiment (VADER)**: `analyze_comment_sentiment()` in `app/analysis_tools.py`
-- **Sponsored vs organic**: `analyze_sponsorship()` in `app/analysis_tools.py`
+- **Core requirement — tool calling (Collect)**: `fetch_youtube_sample` in `build_collection_tool()` / `run_collection_with_tool_calling_agent()` — `app/collection_agent.py`
+- **Core requirement — tool calling (EDA)**: LangChain `@tool` definitions in `build_eda_tools()` and orchestration in `run_eda_with_tool_calling_agent()` — `app/eda_agent.py`
+- **Upload frequency**: `analyze_upload_frequency()` in `app/analysis_tools.py` (invoked **only** from tool `eda_upload_and_trend` in `app/eda_agent.py`)
+- **Comment sentiment (VADER)**: `analyze_comment_sentiment()` in `app/analysis_tools.py` (tool `eda_comment_sentiment`)
+- **Sponsored vs organic**: `analyze_sponsorship()` in `app/analysis_tools.py` (tool `eda_sponsorship`)
 - **LLM creator brief**: `generate_creator_brief()` in `app/llm_client.py`
-- **Chat backend**: `POST /chat` in `app/main.py` using `chat_with_analysis_context()`
+- **Chat backend**: `POST /chat` in `app/main.py` → `chat_with_analysis_context()` in `app/llm_client.py` (tool-calling over `app/chat_tools.py`)
 - **Dashboard UI + chat UI**: `app/templates/index.html`, `app/static/app.js`, `app/static/styles.css`
+
+> **Note:** `app/tools.py` is a legacy LangChain tool sketch and is **not** on the `/analyze` execution path; EDA tools live in `app/eda_agent.py`.
 
 ## Two grab-bags used
 

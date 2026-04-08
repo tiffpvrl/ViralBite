@@ -4,7 +4,9 @@ from typing import Any, Dict, List
 
 from pydantic import BaseModel, Field
 from langchain_google_vertexai import ChatVertexAI
-from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, ToolMessage
+
+from app.chat_tools import build_chat_analysis_tools
 
 
 def _creator_model_name() -> str:
@@ -236,49 +238,101 @@ def extract_comment_themes_llm(comments: List[str]) -> List[str]:
         return []
 
 
+CHAT_AGENT_SYSTEM = """You are ViralBite chat: a creator strategy assistant for the current analysis run.
+
+CREATOR_PROFILE (use when non-empty to tailor tone, examples, and recommendations): {creator_profile}
+
+Rules:
+- You MUST ground answers in tool results. Call one or more tools as needed for each user question; different questions may need different tools.
+- Do not invent numbers or metrics. If tools return empty or missing data, say so.
+- You cannot fetch new YouTube data, change search queries, or re-run analysis. Tell the user to click Analyze again if they need a fresh sample.
+- Keep replies concise and practical.
+
+TOPIC: {topic}
+
+Tools expose slices of the same dashboard JSON (no live API calls inside tools)."""
+
+
+def _append_history_messages(
+    messages: List[Any],
+    history: List[Dict[str, str]],
+) -> None:
+    for item in history:
+        role = item.get("role")
+        content = item.get("content", "")
+        if role == "user" and content:
+            messages.append(HumanMessage(content=content))
+        elif role == "assistant" and content:
+            messages.append(AIMessage(content=content))
+
+
 def chat_with_analysis_context(
     topic: str,
     analysis: Dict[str, Any],
     history: List[Dict[str, str]],
     message: str,
+    creator_profile: str = "",
+    final_response: Dict[str, Any] | None = None,
 ) -> str:
+    """
+    Chat uses LangChain tools over the in-memory analysis (+ optional brief) payload.
+    When Vertex is unavailable, falls back to a single completion over full JSON (no tools).
+    """
+    profile = (creator_profile or "").strip()
     project = os.getenv("GOOGLE_CLOUD_PROJECT")
+
     if not project:
         return (
-            "Chat is running in fallback mode because GOOGLE_CLOUD_PROJECT is not set. "
-            "I can still summarize: ask about top videos, duration patterns, sponsorship, "
-            "or creator recommendations."
+            "Chat uses Vertex AI tools and needs GOOGLE_CLOUD_PROJECT in your environment. "
+            "Set it to enable tool-grounded answers. Your Analysis tab still shows metrics from the last run."
         )
 
-    try:
-        llm = ChatVertexAI(
-            model_name=_chat_model_name(),
-            temperature=0.3,
-            project=project,
+    tools, by_name = build_chat_analysis_tools(analysis, final_response)
+    llm = ChatVertexAI(
+        model_name=_chat_model_name(),
+        temperature=0.25,
+        project=project,
+    )
+    llm_t = llm.bind_tools(tools)
+
+    messages: List[Any] = [
+        SystemMessage(
+            content=CHAT_AGENT_SYSTEM.format(
+                topic=topic,
+                creator_profile=profile or "Not provided — give general creator advice only.",
+            )
         )
+    ]
+    _append_history_messages(messages, history)
 
-        messages = [
-            SystemMessage(content=(
-                "You are ViralBite, a creator strategy assistant. Answer only using the provided "
-                "analysis context for the topic. If information is missing, say so clearly and "
-                "suggest what metric would help. Keep answers concise and practical.\n\n"
-                f"TOPIC: {topic}\n"
-                f"ANALYSIS_JSON: {json.dumps(analysis)}"
-            ))
-        ]
-
-        for item in history:
-            role = item.get("role")
-            content = item.get("content", "")
-            if role == "user" and content:
-                messages.append(HumanMessage(content=content))
-            elif role == "assistant" and content:
-                messages.append(AIMessage(content=content))
-
+    if not history or history[-1].get("content") != message or history[-1].get("role") != "user":
         messages.append(HumanMessage(content=message))
 
-        response = llm.invoke(messages)
-        return str(response.content) if response.content else ""
+    max_rounds = 6
+    try:
+        for _ in range(max_rounds):
+            response = llm_t.invoke(messages)
+            tool_calls = getattr(response, "tool_calls", None) or []
+            if not tool_calls:
+                text = getattr(response, "content", None) or ""
+                return str(text).strip() or "I couldn’t produce a reply. Try rephrasing your question."
+
+            messages.append(response)
+            for i, tc in enumerate(tool_calls):
+                name = tc.get("name")
+                if name not in by_name:
+                    continue
+                args = tc.get("args") or {}
+                out = by_name[name].invoke(args)
+                tid = tc.get("id") or tc.get("tool_call_id") or f"tool_{i}"
+                messages.append(
+                    ToolMessage(content=out if isinstance(out, str) else str(out), tool_call_id=tid)
+                )
+
+        last = messages[-1]
+        if isinstance(last, AIMessage) and last.content:
+            return str(last.content)
+        return "I hit the tool-call limit for this message. Try a simpler question."
     except Exception as e:
         print(f"Vertex AI Chat Error: {e}")
         return "I'm having trouble connecting to Vertex AI right now."

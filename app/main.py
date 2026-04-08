@@ -1,4 +1,4 @@
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from fastapi import FastAPI, Request, Query
 from fastapi.responses import HTMLResponse
@@ -100,6 +100,8 @@ class ChatRequest(BaseModel):
     analysis: Dict[str, Any]
     history: List[ChatMessage] = Field(default_factory=list)
     message: str
+    creator_profile: str = ""
+    final_response: Optional[Dict[str, Any]] = None
 
 
 @app.post("/chat")
@@ -110,5 +112,7 @@ def chat(payload: ChatRequest):
         analysis=payload.analysis,
         history=history,
         message=payload.message,
+        creator_profile=payload.creator_profile,
+        final_response=payload.final_response,
     )
     return clean_nan({"response": response_text})
