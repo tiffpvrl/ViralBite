@@ -238,6 +238,33 @@ def extract_comment_themes_llm(comments: List[str]) -> List[str]:
         return []
 
 
+def _normalize_vertex_text_content(content: Any) -> str:
+    """
+    Gemini / Vertex may return AIMessage.content as a str, or as a list of blocks like
+    [{'type': 'text', 'text': '...'}, ...]. Stringifying the list shows raw Python repr in the UI.
+    """
+    if content is None:
+        return ""
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts: List[str] = []
+        for block in content:
+            if isinstance(block, str):
+                parts.append(block)
+            elif isinstance(block, dict):
+                if block.get("type") == "text" or "text" in block:
+                    txt = block.get("text")
+                    if isinstance(txt, str) and txt.strip():
+                        parts.append(txt)
+                elif isinstance(block.get("content"), str):
+                    parts.append(block["content"])
+            else:
+                parts.append(str(block))
+        return "\n\n".join(parts) if parts else ""
+    return str(content)
+
+
 CHAT_AGENT_SYSTEM = """You are ViralBite chat: a creator strategy assistant for the current analysis run.
 
 CREATOR_PROFILE (use when non-empty to tailor tone, examples, and recommendations): {creator_profile}
@@ -314,8 +341,9 @@ def chat_with_analysis_context(
             response = llm_t.invoke(messages)
             tool_calls = getattr(response, "tool_calls", None) or []
             if not tool_calls:
-                text = getattr(response, "content", None) or ""
-                return str(text).strip() or "I couldn’t produce a reply. Try rephrasing your question."
+                raw = getattr(response, "content", None)
+                text = _normalize_vertex_text_content(raw).strip()
+                return text or "I couldn’t produce a reply. Try rephrasing your question."
 
             messages.append(response)
             for i, tc in enumerate(tool_calls):
@@ -329,9 +357,11 @@ def chat_with_analysis_context(
                     ToolMessage(content=out if isinstance(out, str) else str(out), tool_call_id=tid)
                 )
 
-        last = messages[-1]
-        if isinstance(last, AIMessage) and last.content:
-            return str(last.content)
+        for msg in reversed(messages):
+            if isinstance(msg, AIMessage) and msg.content:
+                out = _normalize_vertex_text_content(msg.content).strip()
+                if out:
+                    return out
         return "I hit the tool-call limit for this message. Try a simpler question."
     except Exception as e:
         print(f"Vertex AI Chat Error: {e}")
