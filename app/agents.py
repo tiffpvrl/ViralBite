@@ -14,7 +14,6 @@ def collector_node(state):
     max_comments_per_video = int(state.get("max_comments_per_video", 10))
     order = state.get("order", "viewCount")
     window_days = state.get("window_days", 30)
-    max_pages = int(state.get("max_pages", 10))
 
     videos, collect_extra = run_collection_with_tool_calling_agent(
         topic=query,
@@ -23,7 +22,6 @@ def collector_node(state):
         max_comments_per_video=max_comments_per_video,
         order=order,
         window_days=window_days,
-        max_pages=max_pages,
     )
 
     videos_with_comments = sum(1 for video in videos if video.get("top_comments"))
@@ -33,7 +31,6 @@ def collector_node(state):
         "max_comments_per_video": max_comments_per_video,
         "order": order,
         "window_days": int(window_days) if window_days is not None else None,
-        "max_pages": max_pages,
         "fetched_videos": len(videos),
         "videos_with_comments": videos_with_comments,
         "videos_with_transcript": videos_with_transcript,

@@ -24,6 +24,14 @@ MAX_TRANSCRIPT_VIDEOS_DEFAULT = int(os.getenv("VIRALBITE_MAX_TRANSCRIPT_VIDEOS",
 if not API_KEY:
     raise ValueError("API key not found. Check your .env file.")
 
+# Upper bound on search.list pagination (each page up to 50 candidates). Not exposed as API;
+# prevents runaway quota if many results are filtered by duration. Override via env if needed.
+def _max_search_pages_safety() -> int:
+    try:
+        return max(1, min(int(os.getenv("VIRALBITE_MAX_SEARCH_PAGES_SAFETY", "100")), 500))
+    except ValueError:
+        return 100
+
 
 def get_comments(youtube, video_id, max_comments=20):
     try:
@@ -138,11 +146,10 @@ def collect_youtube_data(
     fetch_comments=True,
     order="viewCount",
     window_days: Optional[int] = 30,
-    max_pages: int = 10,
 ):
     youtube = build("youtube", "v3", developerKey=API_KEY)
     target_results = max(1, min(int(max_results), 50))
-    page_limit = max(1, min(int(max_pages), 50))
+    page_limit = _max_search_pages_safety()
     published_after = _to_rfc3339_utc(window_days)
     min_sec = _min_duration_threshold()
 
@@ -151,6 +158,7 @@ def collect_youtube_data(
     next_page_token: Optional[str] = None
     pages_fetched = 0
 
+    # Paginate until we have enough long-form videos, search is exhausted, or safety cap.
     while len(qualifying) < target_results and pages_fetched < page_limit:
         request_payload: Dict[str, Any] = {
             "q": query,

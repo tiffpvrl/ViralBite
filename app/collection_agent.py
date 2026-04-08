@@ -20,11 +20,14 @@ COLLECTION_SYSTEM_PROMPT = """You are a YouTube search strategist for ViralBite 
 
 You have exactly one tool: `fetch_youtube_sample`. You MUST call it exactly once.
 
-Choose `youtube_search_query` — a concise string for the YouTube Search API `q` parameter:
+Choose `youtube_search_query` — a concise string for the YouTube Search API `q` parameter by considering:
 - Reflect the user's TOPIC clearly.
 - When CREATOR_PROFILE is non-empty, bias the query toward that niche (audience, format, tone).
-  Example: topic "breakfast ideas" + profile "kids vlogs" → prefer family/kids/lunchbox language
-  over generic adult brunch content.
+  Example: topic "breakfast ideas" + profile "kids vlogs" → prefer "breakfast ideas for kids" as the query
+  as opposed to "breakfast ideas for adults".
+  - Make sure you are reasoning through what the TOPIC vs the PROFILE is. If the TOPIC is already related to the PROFILE,
+  then it is probably better to use the TOPIC as the query.
+  Example: topic "matcha latte" + profile "asian recipes" → prefer "matcha latte" as the query.
 - When CREATOR_PROFILE is empty, use a strong topic-focused query without inventing a profile.
 - Stay concise (roughly under 100 characters). No surrounding quotes in the argument value.
 
@@ -51,7 +54,6 @@ def build_collection_tool(
     max_comments_per_video: int,
     order: str,
     window_days: int,
-    max_pages: int,
     capture: Dict[str, Any],
 ) -> Tuple[List[BaseTool], Dict[str, BaseTool]]:
     """Single tool that runs `collect_youtube_data` and stores full videos in `capture`."""
@@ -68,7 +70,6 @@ def build_collection_tool(
             fetch_comments=True,
             order=order,
             window_days=window_days,
-            max_pages=max_pages,
         )
         capture["videos"] = videos
         return json.dumps(
@@ -92,7 +93,6 @@ def run_collection_with_tool_calling_agent(
     max_comments_per_video: int,
     order: str,
     window_days: int,
-    max_pages: int,
 ) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
     """
     Returns (videos, collection_meta_extra).
@@ -112,7 +112,6 @@ def run_collection_with_tool_calling_agent(
         max_comments_per_video=max_comments_per_video,
         order=order,
         window_days=int(window_days) if window_days is not None else 30,
-        max_pages=max_pages,
         capture=capture,
     )
 

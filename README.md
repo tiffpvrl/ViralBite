@@ -26,22 +26,22 @@ Set environment variables:
 - `VIRALBITE_TRANSCRIPT_WORKERS` (optional, defaults to `4`)
 - `VIRALBITE_MAX_TRANSCRIPT_VIDEOS` (optional, defaults to `8`)
 - `VIRALBITE_MIN_DURATION_SECONDS` (optional, defaults to `60`) — analysis includes only videos with **duration strictly greater** than this value (seconds), so the default excludes Shorts and clips ≤1 minute
+- `VIRALBITE_MAX_SEARCH_PAGES_SAFETY` (optional, defaults to `100`) — upper bound on `search.list` pages while collecting long-form videos (each page up to 50 candidates). Collection stops earlier when `max_videos` qualifying rows are filled or YouTube returns no further pages.
 
 ## Analyze defaults and tuning
 
 `GET /analyze` supports optional query parameters:
 
 - `days` (default `30`): lookback window
-- `max_videos` (default `35`, max `50`): number of videos to analyze
+- `max_videos` (default `35`, max `50`): target number of long-form videos (after duration filter); search **paginates** until enough are found or results are exhausted (see `VIRALBITE_MAX_SEARCH_PAGES_SAFETY`)
 - `order` (default `viewCount`): YouTube search ordering
-- `max_pages` (default `2`): how many search pages to pull (up to `3`)
 - `max_comments` (default `10`): top comments per selected video
 
 The frontend uses the defaults above and the dashboard now includes a sample definition line so users can see exactly what dataset was analyzed.
 
 ## Quota + latency notes
 
-- YouTube `search.list` is high quota cost (commonly `100` units per call). Increasing `max_pages` increases quota usage.
+- YouTube `search.list` is high quota cost (commonly `100` units per call). More pages may run until the target long-form count is met; cap with `VIRALBITE_MAX_SEARCH_PAGES_SAFETY` if needed.
 - `videos.list` is batched and relatively cheap.
 - Comment fetches are parallelized with a bounded thread pool to reduce wall-clock latency.
 - To protect throughput, comments are fetched for only `VIRALBITE_MAX_COMMENT_VIDEOS` top-view videos by default.

@@ -41,7 +41,6 @@ const DEFAULT_ANALYZE_PARAMS = {
   days: 30,
   max_videos: 35,
   order: "viewCount",
-  max_pages: 10,
   max_comments: 10,
 };
 
@@ -1075,7 +1074,6 @@ async function runAnalysis(topic) {
       days: String(DEFAULT_ANALYZE_PARAMS.days),
       max_videos: String(DEFAULT_ANALYZE_PARAMS.max_videos),
       order: DEFAULT_ANALYZE_PARAMS.order,
-      max_pages: String(DEFAULT_ANALYZE_PARAMS.max_pages),
       max_comments: String(DEFAULT_ANALYZE_PARAMS.max_comments),
       creator_profile: creatorProfile,
     });

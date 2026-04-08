@@ -16,7 +16,6 @@ def run_topic_analysis(
     window_days: int = 30,
     max_results: int = 35,
     order: str = "viewCount",
-    max_pages: int = 10,
     max_comments_per_video: int = 10,
     creator_profile: str = "",
 ) -> dict:
@@ -29,7 +28,6 @@ def run_topic_analysis(
         int(window_days),
         int(max_results),
         order,
-        int(max_pages),
         int(max_comments_per_video),
         min_dur,
         creator_profile.strip().lower(),
@@ -49,7 +47,6 @@ def run_topic_analysis(
             "window_days": window_days,
             "max_results": max_results,
             "order": order,
-            "max_pages": max_pages,
             "max_comments_per_video": max_comments_per_video,
             "creator_profile": creator_profile,
         }
