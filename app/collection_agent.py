@@ -36,7 +36,7 @@ Do not call any tool twice. Do not fabricate video statistics — the tool fetch
 
 def _collection_model_name() -> str:
     return os.getenv("VERTEXAI_COLLECTION_MODEL") or os.getenv("VERTEXAI_CHAT_MODEL") or os.getenv(
-        "VERTEXAI_MODEL", "gemini-2.0-flash"
+        "VERTEXAI_MODEL", "gemini-2.5-flash"
     )
 
 

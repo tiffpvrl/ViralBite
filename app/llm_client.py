@@ -220,7 +220,7 @@ def extract_comment_themes_llm(comments: List[str]) -> List[str]:
 
     try:
         llm = ChatVertexAI(
-            model_name=os.getenv("VERTEXAI_THEME_MODEL", "gemini-1.5-flash"),
+            model_name=os.getenv("VERTEXAI_THEME_MODEL", "gemini-2.5-flash"),
             temperature=0.2,
             project=project,
         )
